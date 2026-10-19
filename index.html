@@ -3,29 +3,37 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<meta name="theme-color" content="#ffffff" />
+<meta name="theme-color" content="#0b1220" />
 <title>Vigilante de Juntas</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-measure@3.1.0/dist/leaflet-measure.css" />
 <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
   :root{
-    --bg:#ffffff; --surface:#f7f7f8; --surface-2:#efeff1;
-    --border:#e2e2e5; --border-2:#cfcfd4;
-    --text:#1a1a1d; --muted:#6b6b73; --muted-2:#9a9aa2;
-    --accent:#2563eb; --success:#15803d; --warn:#b45309; --danger:#b91c1c;
+    --bg:#0b1220;
+    --surface:#111a2b;
+    --surface-2:#16213a;
+    --border:#1f2a44;
+    --border-2:#2a3a5c;
+    --text:#e6edf7;
+    --muted:#8a97ad;
+    --muted-2:#5f6c82;
+    --accent:#38bdf8;
+    --accent-2:#0ea5e9;
+    --success:#22c55e;
+    --warn:#f59e0b;
+    --danger:#ef4444;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
     font-size:14px;overflow:hidden;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
   #app{display:flex;height:100vh;height:100dvh;}
 
-  #map{flex:1;position:relative;z-index:1;background:#f0f0f2;}
-  .leaflet-container{background:#f0f0f2 !important;font-family:inherit !important;}
+  #map{flex:1;position:relative;z-index:1;background:#0e1727;}
+  .leaflet-container{background:#0e1727 !important;font-family:inherit !important;}
 
   #panel{width:400px;background:var(--bg);border-left:1px solid var(--border);
     display:flex;flex-direction:column;overflow:hidden;z-index:2;}
@@ -39,7 +47,7 @@
     font-size:12px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;
     transition:color .15s,border-color .15s;font-family:inherit;}
   #tabs button:hover{color:var(--text);}
-  #tabs button.active{color:var(--text);border-bottom-color:var(--accent);font-weight:600;}
+  #tabs button.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600;}
 
   .tab-content{display:none;flex:1;overflow-y:auto;padding:20px;-webkit-overflow-scrolling:touch;}
   .tab-content.active{display:block;}
@@ -50,44 +58,45 @@
   label:first-child{margin-top:0;}
   input[type="text"],input[type="date"],input[type="number"],select,textarea{
     width:100%;padding:9px 11px;border:1px solid var(--border-2);border-radius:4px;
-    font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);
-    transition:border-color .15s;outline:none;}
-  input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+    font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);
+    transition:border-color .15s,background .15s;outline:none;}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);background:var(--surface-2);}
   textarea{resize:vertical;min-height:64px;line-height:1.4;}
-  select{appearance:none;background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b6b73' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  select{appearance:none;background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238a97ad' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
     background-repeat:no-repeat;background-position:right 11px center;padding-right:30px;}
 
   .btn{width:100%;padding:10px 14px;border:1px solid var(--border-2);border-radius:4px;
     font-size:13px;font-weight:500;cursor:pointer;margin-top:8px;font-family:inherit;
     display:flex;align-items:center;justify-content:center;
-    transition:background .15s,border-color .15s,opacity .15s;background:var(--bg);color:var(--text);}
+    transition:background .15s,border-color .15s,opacity .15s;background:var(--surface);color:var(--text);}
   .btn:active{transform:translateY(1px);}
   .btn:disabled{opacity:.4;cursor:not-allowed;}
-  .btn:hover:not(:disabled){background:var(--surface);}
-  .btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);}
-  .btn-primary:hover:not(:disabled){background:#1d4ed8;border-color:#1d4ed8;}
-  .btn-danger{background:var(--bg);color:var(--danger);border-color:var(--danger);}
-  .btn-danger:hover:not(:disabled){background:#fef2f2;}
-  .btn-go{background:var(--success);color:#fff;border-color:var(--success);}
-  .btn-go:hover:not(:disabled){background:#166534;}
-  .btn-stop{background:var(--danger);color:#fff;border-color:var(--danger);}
-  .btn-stop:hover:not(:disabled){background:#991b1b;}
+  .btn:hover:not(:disabled){background:var(--surface-2);border-color:var(--accent);}
+  .btn-primary{background:var(--accent);color:#04111f;border-color:var(--accent);font-weight:600;}
+  .btn-primary:hover:not(:disabled){background:#7dd3fc;border-color:#7dd3fc;}
+  .btn-danger{background:transparent;color:var(--danger);border-color:var(--danger);}
+  .btn-danger:hover:not(:disabled){background:rgba(239,68,68,.1);}
+  .btn-go{background:var(--success);color:#04111f;border-color:var(--success);font-weight:600;}
+  .btn-go:hover:not(:disabled){background:#4ade80;}
+  .btn-stop{background:var(--danger);color:#fff;border-color:var(--danger);font-weight:600;}
+  .btn-stop:hover:not(:disabled){background:#f87171;}
 
   .section{padding:14px;border:1px solid var(--border);border-radius:6px;margin-bottom:4px;background:var(--surface);}
-  .section-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:10px;}
+  .section-title{font-size:12px;font-weight:600;color:var(--accent);margin-bottom:10px;}
   .row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 
   .coord-box{font-size:12px;font-family:'SF Mono',Monaco,Consolas,monospace;color:var(--text);
-    margin-bottom:10px;padding:8px 11px;background:var(--bg);border-radius:4px;border:1px solid var(--border);word-break:break-all;}
+    margin-bottom:10px;padding:8px 11px;background:var(--bg);border-radius:4px;
+    border:1px solid var(--border);word-break:break-all;}
   .coord-box.empty{color:var(--muted-2);font-style:italic;font-family:inherit;}
 
-  .level-bar{height:20px;background:var(--surface-2);border-radius:4px;overflow:hidden;
+  .level-bar{height:20px;background:var(--bg);border-radius:4px;overflow:hidden;
     margin-bottom:8px;position:relative;border:1px solid var(--border);}
   .level-fill{height:100%;width:0%;background:var(--accent);transition:width .1s;}
   .level-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     font-size:11px;font-weight:600;color:var(--text);}
 
-  #alertBox{display:none;background:#fef2f2;color:var(--danger);
+  #alertBox{display:none;background:rgba(239,68,68,.12);color:#fca5a5;
     padding:10px;border-radius:4px;margin-bottom:12px;font-size:13px;
     text-align:center;font-weight:500;border:1px solid var(--danger);}
   #alertBox.show{display:block;}
@@ -95,11 +104,11 @@
   table{width:100%;border-collapse:collapse;font-size:12px;}
   th,td{padding:6px 5px;border-bottom:1px solid var(--border);text-align:left;}
   th{color:var(--muted);font-weight:500;}
-  tr.alert td{color:var(--danger);font-weight:600;}
+  tr.alert td{color:#fca5a5;font-weight:600;}
 
-  .item{padding:12px 14px;background:var(--bg);border:1px solid var(--border);
+  .item{padding:12px 14px;background:var(--surface);border:1px solid var(--border);
     border-radius:6px;margin-bottom:8px;transition:border-color .15s,background .15s;}
-  .item:hover{border-color:var(--border-2);background:var(--surface);}
+  .item:hover{border-color:var(--border-2);background:var(--surface-2);}
   .item .title{font-weight:600;font-size:13px;display:flex;justify-content:space-between;
     align-items:center;gap:8px;color:var(--text);}
   .item .desc{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.4;}
@@ -107,15 +116,32 @@
 
   .badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;
     font-weight:500;white-space:nowrap;border:1px solid var(--border-2);color:var(--muted);background:var(--bg);}
-  .badge.alto{color:var(--danger);border-color:var(--danger);}
-  .badge.ok{color:var(--success);border-color:var(--success);}
+  .badge.alto{color:#fca5a5;border-color:var(--danger);background:rgba(239,68,68,.1);}
+  .badge.ok{color:#86efac;border-color:var(--success);background:rgba(34,197,94,.1);}
   .badge.nueva{color:var(--muted);border-color:var(--border-2);}
-  .badge.asc{color:var(--accent);border-color:var(--accent);}
-  .badge.desc{color:var(--warn);border-color:var(--warn);}
+  .badge.asc{color:#7dd3fc;border-color:var(--accent);background:rgba(56,189,248,.1);}
+  .badge.desc{color:#fbbf24;border-color:var(--warn);background:rgba(245,158,11,.1);}
 
   .empty-state{text-align:center;padding:32px 16px;color:var(--muted-2);font-size:13px;}
   .list-header{display:flex;align-items:center;justify-content:space-between;
     font-size:12px;color:var(--muted);font-weight:500;margin-bottom:10px;}
+
+  /* Leaflet: controles en tema oscuro */
+  .leaflet-popup-content-wrapper{background:var(--surface);color:var(--text);
+    border-radius:6px;border:1px solid var(--border-2);
+    box-shadow:0 8px 24px rgba(0,0,0,.5);}
+  .leaflet-popup-tip{background:var(--surface);}
+  .leaflet-popup-content{margin:12px;font-family:inherit;font-size:13px;}
+  .leaflet-popup-close-button{color:var(--muted) !important;}
+  .leaflet-control-layers{background:var(--surface) !important;color:var(--text) !important;
+    border-radius:6px !important;border:1px solid var(--border-2) !important;
+    font-family:inherit !important;font-size:12px !important;}
+  .leaflet-control-layers-toggle{background-color:var(--surface) !important;}
+  .leaflet-control-zoom a{background:var(--surface) !important;color:var(--text) !important;
+    border-color:var(--border-2) !important;}
+  .leaflet-control-zoom a:hover{background:var(--surface-2) !important;color:var(--accent) !important;}
+  .leaflet-control-attribution{background:rgba(11,18,32,.8) !important;color:var(--muted) !important;}
+  .leaflet-control-attribution a{color:var(--accent) !important;}
 
   @media (max-width:900px){
     #app{flex-direction:column;}
@@ -135,7 +161,7 @@
   <aside id="panel">
     <header>
       <h1>Vigilante de juntas</h1>
-      <span class="version">v1.1</span>
+      <span class="version">v1.2</span>
     </header>
 
     <div id="tabs">
@@ -166,9 +192,6 @@
 
       <div class="section">
         <div class="section-title">Disparo de foto</div>
-        <label style="display:flex;align-items:center;gap:8px;margin:0 0 8px;font-weight:400;">
-          <input type="checkbox" id="chkDobleTap" checked> Doble toque en pantalla
-        </label>
         <label style="display:flex;align-items:center;gap:8px;margin:0 0 8px;font-weight:400;">
           <input type="checkbox" id="chkGolpeSeco" checked> Golpe seco en el móvil
         </label>
@@ -225,7 +248,6 @@
 <input type="file" id="inputCamara" accept="image/*" capture="environment" style="display:none">
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet-measure@3.1.0/dist/leaflet-measure.min.js"></script>
 <script>
 (() => {
   // ══════ SUPABASE ══════
@@ -285,20 +307,19 @@
     attribution:'PNOA © IGN España',maxZoom:20});
   const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     attribution:'© OpenStreetMap',maxZoom:19});
-  const map = L.map('map',{center:CENTRO_LA_RIOJA,zoom:10,layers:[pnoa],tap:true,touchZoom:true});
-  L.control.layers({"Ortofoto PNOA":pnoa,"Mapa de calles":osm}).addTo(map);
 
-  // Regla de medida
-  L.control.measure({
-    position:'topleft',
-    primaryLengthUnit:'meters',
-    secondaryLengthUnit:'kilometers',
-    primaryAreaUnit:'sqmeters',
-    activeColor:'#2563eb',
-    completedColor:'#15803d'
+  // Tema oscuro para el mapa
+  const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    attribution:'© CARTO · © OpenStreetMap',maxZoom:19});
+
+  const map = L.map('map',{center:CENTRO_LA_RIOJA,zoom:10,layers:[cartoDark],tap:true,touchZoom:true});
+  L.control.layers({
+    "Mapa oscuro": cartoDark,
+    "Ortofoto PNOA": pnoa,
+    "Mapa de calles": osm
   }).addTo(map);
 
-  let pathPolyline = L.polyline([],{color:'#2563eb',weight:3,opacity:.5}).addTo(map);
+  let pathPolyline = L.polyline([],{color:'#38bdf8',weight:3,opacity:.6}).addTo(map);
   let juntaLayer = L.layerGroup().addTo(map);
 
   // ══════ ESTADO ══════
@@ -310,11 +331,10 @@
   // Foto
   let fotoPendiente = null;
   let ultimaFotoTs = 0;
-  let ultimoToqueTs = 0;
   let golpeFotoArmed = false;
 
   // Sentido por PK
-  let historialPK = [];  // [{ ts, pk, carretera }]
+  let historialPK = [];
 
   // ══════ SUPABASE ══════
   async function cargarTodo() {
@@ -401,14 +421,12 @@
       if (!acc || acc.x === null) return;
       const mag = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2);
 
-      // Registrar evento por golpe
       const umbralAcel = parseFloat($('umbralAcel').value) || 15;
       if (mag > umbralAcel && Date.now() - ultimoGolpeTs > 1500 && ultimaPos) {
         ultimoGolpeTs = Date.now();
         registrarEvento(new Date().toISOString(), Math.min(100, Math.round(mag*3)), ultimaPos, 'acelerometro');
       }
 
-      // Disparar foto por golpe seco
       if ($('chkGolpeSeco').checked) {
         const umbralFoto = parseFloat($('umbralGolpeFoto').value) || 25;
         const cooldown = (parseFloat($('cooldownFoto').value) || 3) * 1000;
@@ -466,18 +484,6 @@
     $('inputCamara').click();
   }
 
-  document.addEventListener('touchend', (e) => {
-    if (!running || !$('chkDobleTap').checked) return;
-    if (e.target.closest('button, input, select, textarea, a')) return;
-    const ahora = Date.now();
-    if (ahora - ultimoToqueTs < 400) {
-      dispararFoto('doble tap');
-      ultimoToqueTs = 0;
-    } else {
-      ultimoToqueTs = ahora;
-    }
-  }, { passive: true });
-
   $('inputCamara').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -511,7 +517,6 @@
 
   // ══════ JUNTAS ══════
   function buscarJuntaCercana(lat, lng, radio, sentido, pk, carretera) {
-    // 1) Clave lógica exacta
     if (pk != null && carretera) {
       const pkRed = pk.toFixed(3);
       for (const id in juntas) {
@@ -521,7 +526,6 @@
         }
       }
     }
-    // 2) Fallback por radio respetando sentido
     for (const id in juntas) {
       const j = juntas[id];
       if (distanciaMetros(lat, lng, j.lat, j.lng) <= radio) {
@@ -624,14 +628,14 @@
       const j = juntas[id];
       const nombre = j.nombre_personalizado || j.junta_id;
       const sent = j.sentido || 'IND';
-      const color = sent === 'DESC' ? '#b45309' : sent === 'ASC' ? '#2563eb' : '#6b6b73';
+      const color = sent === 'DESC' ? '#f59e0b' : sent === 'ASC' ? '#38bdf8' : '#8a97ad';
       const subtitulo = (j.carretera||'') + (j.pk?' · PK '+j.pk:'') + ' · ' + sent;
-      L.circleMarker([j.lat,j.lng],{radius:8,color,fillColor:color,fillOpacity:.7,weight:2})
+      L.circleMarker([j.lat,j.lng],{radius:8,color,fillColor:color,fillOpacity:.85,weight:2})
         .bindPopup(`<b>${nombre}</b><br>${subtitulo}`).addTo(juntaLayer);
     }
     eventos.forEach(e => {
       if (e.foto && e.lat && e.lon) {
-        L.circleMarker([e.lat,e.lon],{radius:5,color:'#b45309',fillColor:'#b45309',fillOpacity:.9,weight:1})
+        L.circleMarker([e.lat,e.lon],{radius:5,color:'#f59e0b',fillColor:'#f59e0b',fillOpacity:.9,weight:1})
           .bindPopup(`<b>Foto</b><br>${new Date(e.ts).toLocaleString()}<br><img src="${e.foto}" style="width:140px;border-radius:4px;margin-top:6px;">`)
           .addTo(juntaLayer);
       }
