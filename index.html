@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Vigilante de Juntas · Audio + Acelerómetro</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 10px; background: #0f0f0f; color: #eee; display: flex; flex-direction: column; align-items: center; }
+  h1 { font-size: 1.05rem; margin: 4px 0 10px; }
+  .card { width: 100%; max-width: 600px; background: #1a1a1a; border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .row label { font-size: 0.8rem; color: #999; flex: 0 0 auto; }
+  input { background: #222; border: 1px solid #333; color: #eee; padding: 7px; border-radius: 6px; font-size: 0.85rem; width: 100%; }
+  button { border: none; border-radius: 8px; padding: 10px 14px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+  .btn-go { background: #2a9d8f; color: #fff; }
+  .btn-stop { background: #e63946; color: #fff; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(230,57,70,.6); } 50% { box-shadow: 0 0 0 14px rgba(230,57,70,0); } }
+  .btn-blue { background: #4cc9f0; color: #000; }
+  .btn-secondary { background: #333; color: #eee; }
+  .btn-danger { background: #8b0000; color: #fff; }
+  button:disabled { opacity: .35; cursor: not-allowed; }
+  #map { width: 100%; height: 300px; border-radius: 10px; margin-bottom: 10px; z-index: 1; }
+  .stats { font-size: 0.82rem; color: #aaa; text-align: center; }
+  .stats strong { color: #4cc9f0; }
+  #status { font-size: 0.85rem; color: #ccc; text-align: center; }
+  #alertBox { display: none; background: #b00020; color: #fff; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 0.9rem; text-align: center; font-weight: 600; }
+  #alertBox.show { display: block; }
+  #levelBar { height: 24px; background: #222; border-radius: 12px; overflow: hidden; margin-bottom: 8px; position: relative; }
+  #levelFill { height: 100%; width: 0%; background: linear-gradient(90deg,#2a9d8f,#e9c46a,#e63946); transition: width .1s; }
+  #levelText { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold; color: #000; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.74rem; }
+  th, td { padding: 4px 5px; border-bottom: 1px solid #2a2a2a; text-align: left; }
+  th { color: #4cc9f0; font-weight: 600; }
+  tr.alert td { color: #ff6b6b; font-weight: bold; }
+  .flex { display: flex; gap: 8px; flex-wrap: wrap; }
+  .flex > * { flex: 1; min-width: 120px; }
+  .hidden { display: none !important; }
+  details summary { cursor: pointer; color: #4cc9f0; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+  <h1>🚗 Vigilante · Audio + Acelerómetro</h1>
+  <div id="alertBox"></div>
+
+  <div class="card" id="mobileControls">
+    <div class="row">
+      <label>Umbral audio %:</label><input id="umbral" type="number" value="25" min="5" max="200">
+      <label>Nivel golpe audio:</label><input id="nivelGolpe" type="number" value="45" min="10" max="100">
+    </div>
+    <div class="row">
+      <label>Umbral aceleración (m/s²):</label><input id="umbralAcel" type="number" value="15" min="5" max="50">
+    </div>
+    <div class="row">
+      <label>Radio junta (m):</label><input id="radio" type="number" value="20" min="5" max="100">
+      <label>Días media:</label><input id="diasMedia" type="number" value="5" min="2" max="30">
+    </div>
+    <div class="flex">
+      <button id="startBtn" class="btn-go" disabled>▶ Iniciar ruta</button>
+      <button id="stopBtn" class="btn-stop hidden">⏹ Detener</button>
+    </div>
+    <div id="levelBar" style="margin-top:10px"><div id="levelFill"></div><div id="levelText">—</div></div>
+    <div class="stats">Eventos hoy: <strong id="countEventos">0</strong> · GPS: <strong id="gpsStatus">—</strong></div>
+  </div>
+
+  <div class="card hidden" id="pcControls">
+    <div class="flex">
+      <button id="refreshBtn" class="btn-blue">🔄 Actualizar datos</button>
+      <button id="downloadBtn" class="btn-secondary" disabled>⬇ Descargar CSV</button>
+      <button id="clearBtn" class="btn-danger">🗑 Borrar nube</button>
+    </div>
+    <div id="status" style="margin-top:8px">Cargando datos de la nube...</div>
+  </div>
+
+  <div id="map"></div>
+
+  <div class="card">
+    <details open>
+      <summary>📊 Juntas comparadas</summary>
+      <div id="summary" style="margin-top:8px"><em style="color:#666">Cargando...</em></div>
+    </details>
+  </div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(() => {
+  // ===== CREDENCIALES SUPABASE =====
+  const SUPABASE_URL = 'https://yacyxoxkggavyeyglzzh.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_rfoOb8wFQP6WwUSoaGF_WA_eA_PfF5O';
+  // =================================
+
+  const { createClient } = supabase;
+  const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const $ = id => document.getElementById(id);
+  const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  
+  const startBtn = $('startBtn'), stopBtn = $('stopBtn');
+  const refreshBtn = $('refreshBtn'), downloadBtn = $('downloadBtn'), clearBtn = $('clearBtn');
+  const statusEl = $('status'), alertBox = $('alertBox');
+  const countEventos = $('countEventos'), gpsStatus = $('gpsStatus');
+  const levelFill = $('levelFill'), levelText = $('levelText');
+  const summaryEl = $('summary');
+  const umbralInput = $('umbral'), nivelGolpeInput = $('nivelGolpe');
+  const umbralAcelInput = $('umbralAcel');
+  const radioInput = $('radio'), diasMediaInput = $('diasMedia');
+
+  let audioContext, analyser, micStream;
+  let eventos = [];
+  let watchId = null, running = false, ultimaPos = null, ultimoGolpeTs = 0, sampleTimer = null;
+  let map, pathPolyline, eventLayer;
+
+  const hoy = () => new Date().toISOString().slice(0,10);
+  const setStatus = m => statusEl.textContent = m;
+  function distancia(la1, lo1, la2, lo2) { const R=6371000, t=x=>x*Math.PI/180; const dLa=t(la2-la1), dLo=t(lo2-lo1); const a=Math.sin(dLa/2)**2+Math.cos(t(la1))*Math.cos(t(la2))*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(a)); }
+
+  if (isMobile) { $('mobileControls').classList.remove('hidden'); $('pcControls').classList.add('hidden'); }
+  else { $('mobileControls').classList.add('hidden'); $('pcControls').classList.remove('hidden'); }
+
+  async function cargarEventos() {
+    setStatus('Cargando datos de la nube...');
+    const { data, error } = await _supabase.from('eventos').select('*').order('ts', { ascending: false });
+    if (error) { setStatus('❌ Error: ' + error.message); return; }
+    eventos = data || [];
+    countEventos.textContent = eventos.filter(e => e.ts.slice(0,10) === hoy()).length;
+    downloadBtn.disabled = eventos.length === 0;
+    dibujarTodo();
+    recalcular();
+    setStatus(`✅ ${eventos.length} eventos cargados`);
+  }
+
+  async function guardarEvento(ev) {
+    const { error } = await _supabase.from('eventos').insert([ev]);
+    if (error) { console.error('Error al guardar:', error); setStatus('❌ Error al guardar: ' + error.message); return false; }
+    return true;
+  }
+
+  function initMap() {
+    map = L.map('map').setView([40.4168, -3.7038], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    pathPolyline = L.polyline([], { color: '#4cc9f0', weight: 3, opacity: .6 }).addTo(map);
+    eventLayer = L.layerGroup().addTo(map);
+  }
+
+  function dibujarTodo() {
+    if (!eventLayer) return;
+    eventLayer.clearLayers();
+    eventos.forEach(e => {
+      if (!e.lat || !e.lon) return;
+      const color = e.alerta ? '#ff2d2d' : (e.tipo === 'acelerometro' ? '#f4a261' : '#e9c46a');
+      L.circleMarker([e.lat, e.lon], { radius: 7, color, fillColor: color, fillOpacity: .8, weight: 2 })
+       .bindPopup(`<b>${e.junta_id}</b><br>Tipo: ${e.tipo || 'audio'}<br>Nivel: ${e.nivel}<br>${new Date(e.ts).toLocaleString()}`).addTo(eventLayer);
+    });
+  }
+
+  async function initSensors() {
+    if (!isMobile) return;
+    try {
+      setStatus('Solicitando micrófono...');
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const src = audioContext.createMediaStreamSource(micStream);
+      analyser = audioContext.createAnalyser(); analyser.fftSize = 1024; src.connect(analyser);
+      
+      setStatus('Comprobando GPS...');
+      navigator.geolocation.getCurrentPosition(
+        () => { gpsStatus.textContent = 'OK'; startBtn.disabled = false; setStatus('Listo ✅ Inicia la ruta'); },
+        (err) => { gpsStatus.textContent = '✗'; setStatus('❌ GPS: ' + err.message); },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } catch (err) { setStatus('❌ ' + err.message); }
+  }
+
+  function nivelActualAudio() {
+    const buf = new Uint8Array(analyser.fftSize);
+    analyser.getByteTimeDomainData(buf);
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; sum += v * v; }
+    return Math.min(100, Math.max(1, Math.round(Math.sqrt(sum / buf.length) * 200)));
+  }
+
+  async function iniciarAcelerometro() {
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      try {
+        const permiso = await DeviceMotionEvent.requestPermission();
+        if (permiso !== 'granted') { setStatus('❌ Permiso acelerómetro denegado'); return; }
+      } catch (err) { setStatus('❌ Error permiso acelerómetro'); return; }
+    }
+    window.addEventListener('devicemotion', (event) => {
+      if (!running) return;
+      const acc = event.accelerationIncludingGravity;
+      if (acc && acc.x !== null) {
+        const magnitud = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2);
+        const umbralAcel = parseFloat(umbralAcelInput.value) || 15;
+        if (magnitud > umbralAcel && Date.now() - ultimoGolpeTs > 1500 && ultimaPos) {
+          ultimoGolpeTs = Date.now();
+          const nivelAcel = Math.min(100, Math.round(magnitud * 3));
+          registrarEvento(new Date().toISOString(), nivelAcel, ultimaPos, 'acelerometro');
+        }
+      }
+    });
+  }
+
+  function loop() {
+    if (!running) return;
+    const nivel = nivelActualAudio();
+    levelFill.style.width = nivel + '%'; levelText.textContent = `Audio: ${nivel}`;
+    const ts = new Date().toISOString(); const pos = ultimaPos;
+    const umbralGolpe = parseInt(nivelGolpeInput.value) || 45;
+    if (nivel >= umbralGolpe && Date.now() - ultimoGolpeTs > 1500 && pos) {
+      ultimoGolpeTs = Date.now();
+      registrarEvento(ts, nivel, pos, 'audio');
+    }
+    sampleTimer = setTimeout(loop, 1000);
+  }
+
+  async function registrarEvento(ts, nivel, pos, tipo) {
+    const radio = parseInt(radioInput.value) || 20;
+    let juntaId = null;
+    for (const e of eventos) { if (e.lat && distancia(pos.lat, pos.lon, e.lat, e.lon) <= radio) { juntaId = e.junta_id; break; } }
+    if (!juntaId) juntaId = 'J-' + (new Set(eventos.map(e => e.junta_id).filter(Boolean)).size + 1);
+
+    const ev = { ts, junta_id: juntaId, nivel, lat: pos.lat, lon: pos.lon, acc: pos.acc, alerta: false, tipo };
+    const ok = await guardarEvento(ev);
+    if (ok) {
+      eventos.unshift({ ...ev, id: Date.now() });
+      countEventos.textContent = eventos.filter(e => e.ts.slice(0,10) === hoy()).length;
+      dibujarTodo(); recalcular();
+    }
+  }
+
+  async function iniciarRuta() {
+    if (running) return;
+    running = true; startBtn.classList.add('hidden'); stopBtn.classList.remove('hidden'); setStatus('🟢 Ruta en curso...');
+    
+    await iniciarAcelerometro();
+
+    watchId = navigator.geolocation.watchPosition(
+      (p) => { ultimaPos = { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy }; gpsStatus.textContent = `±${Math.round(p.coords.accuracy)}m`; if (pathPolyline) pathPolyline.addLatLng([ultimaPos.lat, ultimaPos.lon]); },
+      (err) => { gpsStatus.textContent = '✗'; },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+    );
+    loop();
+  }
+
+  function pararRuta() {
+    running = false;
+    if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+    if (sampleTimer) { clearTimeout(sampleTimer); sampleTimer = null; }
+    startBtn.classList.remove('hidden'); stopBtn.classList.add('hidden');
+    setStatus('⏹ Ruta detenida');
+    cargarEventos();
+  }
+
+  function recalcular() {
+    const umbral = parseInt(umbralInput.value) || 25; const diasN = parseInt(diasMediaInput.value) || 5;
+    const hoyKey = hoy();
+    const porJunta = {};
+    eventos.forEach(e => { if (e.junta_id) (porJunta[e.junta_id] ??= []).push(e); });
+    const filas = []; alertBox.classList.remove('show'); let algunaAlerta = false;
+
+    for (const [juntaId, evs] of Object.entries(porJunta)) {
+      const porDia = {}; evs.forEach(e => { const d = e.ts.slice(0,10); porDia[d] = Math.max(porDia[d] || 0, e.nivel); });
+      const hoyMax = porDia[hoyKey]; if (hoyMax == null) continue;
+      const diasPrevios = Object.entries(porDia).filter(([d]) => d !== hoyKey).sort((a,b) => b[0].localeCompare(a[0])).slice(0, diasN);
+      if (diasPrevios.length === 0) { filas.push({ juntaId, hoyMax, media: null, estado: 'nueva' }); continue; }
+      const media = diasPrevios.reduce((s, [,v]) => s + v, 0) / diasPrevios.length;
+      const limite = media * (1 + umbral/100); const alerta = hoyMax > limite;
+      if (alerta) algunaAlerta = true;
+      filas.push({ juntaId, hoyMax, media, variacion: ((hoyMax/media - 1) * 100).toFixed(0), estado: alerta ? '⚠️ ALTO' : 'OK' });
+    }
+
+    if (filas.length === 0) summaryEl.innerHTML = '<em style="color:#666">Sin juntas visitadas hoy</em>';
+    else {
+      filas.sort((a,b) => (b.estado === '⚠️ ALTO') - (a.estado === '⚠️ ALTO'));
+      let html = `<table><thead><tr><th>Junta</th><th>Hoy</th><th>Media (${diasN}d)</th><th>Δ%</th><th>Estado</th></tr></thead><tbody>`;
+      filas.forEach(f => { const cls = f.estado === '⚠️ ALTO' ? 'alert' : ''; html += `<tr class="${cls}"><td>${f.juntaId}</td><td>${f.hoyMax}</td><td>${f.media != null ? f.media.toFixed(0) : '—'}</td><td>${f.variacion ?? '—'}</td><td>${f.estado}</td></tr>`; });
+      html += '</tbody></table>'; summaryEl.innerHTML = html;
+    }
+    if (algunaAlerta) { const juntas = filas.filter(f => f.estado === '⚠️ ALTO').map(f => f.juntaId).join(', '); alertBox.textContent = `⚠️ Junta(s) con nivel elevado: ${juntas}`; alertBox.classList.add('show'); }
+  }
+
+  function descargarCSV() {
+    if (!eventos.length) return;
+    const header = ['timestamp','junta','tipo','nivel','lat','lon','precision','alerta'];
+    const rows = eventos.map(e => [e.ts, e.junta_id, e.tipo || 'audio', e.nivel, e.lat ?? '', e.lon ?? '', e.acc ?? '', e.alerta ? 'SI' : '']);
+    const csv = [header, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+    a.href = url; a.download = `juntas_${hoy()}.csv`; a.click(); URL.revokeObjectURL(url);
+  }
+
+  async function borrarTodo() {
+    if (!confirm('¿Borrar TODOS los eventos de la nube?')) return;
+    const { error } = await _supabase.from('eventos').delete().neq('id', 0);
+    if (error) { alert('Error: ' + error.message); return; }
+    eventos = []; countEventos.textContent = 0; downloadBtn.disabled = true; alertBox.classList.remove('show');
+    summaryEl.innerHTML = '<em style="color:#666">Sin datos</em>'; dibujarTodo();
+    setStatus('✅ Nube vaciada');
+  }
+
+  if (isMobile) {
+    startBtn.addEventListener('click', iniciarRuta);
+    stopBtn.addEventListener('click', pararRuta);
+  } else {
+    refreshBtn.addEventListener('click', cargarEventos);
+    downloadBtn.addEventListener('click', descargarCSV);
+    clearBtn.addEventListener('click', borrarTodo);
+  }
+  umbralInput.addEventListener('change', recalcular);
+  diasMediaInput.addEventListener('change', recalcular);
+
+  initMap();
+  initSensors();
+  cargarEventos();
+})();
+</script>
+</body>
+</html>
