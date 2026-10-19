@@ -4,455 +4,126 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta name="theme-color" content="#ffffff" />
-<title>Incidencias en Carretera</title>
+<title>Vigilante de Juntas</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <style>
   :root {
-    --bg:        #ffffff;
-    --surface:   #f7f7f8;
-    --surface-2: #efeff1;
-    --border:    #e2e2e5;
-    --border-2:  #cfcfd4;
-    --text:      #1a1a1d;
-    --muted:     #6b6b73;
-    --muted-2:   #9a9aa2;
-    --accent:    #2563eb;
-    --success:   #15803d;
-    --warn:      #b45309;
-    --danger:    #b91c1c;
+    --bg:#ffffff; --surface:#f7f7f8; --surface-2:#efeff1;
+    --border:#e2e2e5; --border-2:#cfcfd4;
+    --text:#1a1a1d; --muted:#6b6b73; --muted-2:#9a9aa2;
+    --accent:#2563eb; --success:#15803d; --warn:#b45309; --danger:#b91c1c;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    height: 100%;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 14px;
-    overflow: hidden;
-    background: var(--bg);
-    color: var(--text);
-    -webkit-font-smoothing: antialiased;
-  }
-  #app { display: flex; height: 100vh; height: 100dvh; }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size:14px; overflow:hidden; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; }
+  #app { display:flex; height:100vh; height:100dvh; }
 
-  #map { flex: 1; position: relative; z-index: 1; background: #f0f0f2; }
-  .leaflet-container { background: #f0f0f2 !important; font-family: inherit !important; }
+  #map { flex:1; position:relative; z-index:1; background:#f0f0f2; }
+  .leaflet-container { background:#f0f0f2 !important; font-family:inherit !important; }
 
-  #panel {
-    width: 400px;
-    background: var(--bg);
-    border-left: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    z-index: 2;
-  }
-  #panel header {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-  #panel header h1 {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text);
-    letter-spacing: -0.01em;
-  }
-  #panel header .version {
-    font-size: 11px;
-    color: var(--muted-2);
-    font-weight: 500;
-  }
+  #panel { width:400px; background:var(--bg); border-left:1px solid var(--border);
+    display:flex; flex-direction:column; overflow:hidden; z-index:2; }
+  #panel header { padding:16px 20px; border-bottom:1px solid var(--border);
+    flex-shrink:0; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  #panel header h1 { font-size:14px; font-weight:600; color:var(--text); letter-spacing:-0.01em; }
+  #panel header .version { font-size:11px; color:var(--muted-2); font-weight:500; }
 
-  #tabs {
-    display: flex;
-    background: var(--bg);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    padding: 0 12px;
-  }
-  #tabs button {
-    flex: 1;
-    padding: 12px 6px;
-    border: none;
-    background: transparent;
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: color .15s, border-color .15s;
-    font-family: inherit;
-  }
-  #tabs button:hover { color: var(--text); }
-  #tabs button.active {
-    color: var(--text);
-    border-bottom-color: var(--accent);
-    font-weight: 600;
-  }
+  #tabs { display:flex; background:var(--bg); border-bottom:1px solid var(--border); flex-shrink:0; padding:0 12px; }
+  #tabs button { flex:1; padding:12px 6px; border:none; background:transparent; color:var(--muted);
+    font-size:12px; font-weight:500; cursor:pointer; border-bottom:2px solid transparent;
+    transition:color .15s, border-color .15s; font-family:inherit; }
+  #tabs button:hover { color:var(--text); }
+  #tabs button.active { color:var(--text); border-bottom-color:var(--accent); font-weight:600; }
 
-  .tab-content {
-    display: none;
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    -webkit-overflow-scrolling: touch;
-  }
-  .tab-content.active { display: block; }
-  .tab-content::-webkit-scrollbar { width: 6px; }
-  .tab-content::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+  .tab-content { display:none; flex:1; overflow-y:auto; padding:20px; -webkit-overflow-scrolling:touch; }
+  .tab-content.active { display:block; }
+  .tab-content::-webkit-scrollbar { width:6px; }
+  .tab-content::-webkit-scrollbar-thumb { background:var(--border-2); border-radius:3px; }
 
-  label {
-    display: block;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--muted);
-    margin-bottom: 6px;
-    margin-top: 16px;
-  }
-  label:first-child { margin-top: 0; }
+  label { display:block; font-size:12px; font-weight:500; color:var(--muted);
+    margin-bottom:6px; margin-top:16px; }
+  label:first-child { margin-top:0; }
   input[type="text"], input[type="date"], input[type="number"], select, textarea {
-    width: 100%;
-    padding: 9px 11px;
-    border: 1px solid var(--border-2);
-    border-radius: 4px;
-    font-size: 13px;
-    font-family: inherit;
-    background: var(--bg);
-    color: var(--text);
-    transition: border-color .15s;
-    outline: none;
-  }
-  input:focus, select:focus, textarea:focus {
-    border-color: var(--accent);
-  }
-  textarea { resize: vertical; min-height: 64px; line-height: 1.4; }
-  select { appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b6b73' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 11px center; padding-right: 30px; }
+    width:100%; padding:9px 11px; border:1px solid var(--border-2); border-radius:4px;
+    font-size:13px; font-family:inherit; background:var(--bg); color:var(--text);
+    transition:border-color .15s; outline:none; }
+  input:focus, select:focus, textarea:focus { border-color:var(--accent); }
+  textarea { resize:vertical; min-height:64px; line-height:1.4; }
+  select { appearance:none; background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b6b73' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat:no-repeat; background-position:right 11px center; padding-right:30px; }
 
-  .btn {
-    width: 100%;
-    padding: 10px 14px;
-    border: 1px solid var(--border-2);
-    border-radius: 4px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    margin-top: 8px;
-    font-family: inherit;
-    display: flex; align-items: center; justify-content: center;
-    transition: background .15s, border-color .15s, opacity .15s;
-    background: var(--bg);
-    color: var(--text);
-  }
-  .btn:active { transform: translateY(1px); }
-  .btn:disabled { opacity: .4; cursor: not-allowed; }
-  .btn:hover:not(:disabled) { background: var(--surface); }
-  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .btn-primary:hover:not(:disabled) { background: #1d4ed8; border-color: #1d4ed8; }
-  .btn-secondary { background: var(--bg); color: var(--text); }
-  .btn-ubi { background: var(--bg); color: var(--text); }
-  .btn-ubi.ok { border-color: var(--accent); color: var(--accent); }
+  .btn { width:100%; padding:10px 14px; border:1px solid var(--border-2); border-radius:4px;
+    font-size:13px; font-weight:500; cursor:pointer; margin-top:8px; font-family:inherit;
+    display:flex; align-items:center; justify-content:center;
+    transition:background .15s, border-color .15s, opacity .15s; background:var(--bg); color:var(--text); }
+  .btn:active { transform:translateY(1px); }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .btn:hover:not(:disabled) { background:var(--surface); }
+  .btn-primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .btn-primary:hover:not(:disabled) { background:#1d4ed8; border-color:#1d4ed8; }
+  .btn-danger { background:var(--bg); color:var(--danger); border-color:var(--danger); }
+  .btn-danger:hover:not(:disabled) { background:#fef2f2; }
+  .btn-go { background:var(--success); color:#fff; border-color:var(--success); }
+  .btn-go:hover:not(:disabled) { background:#166534; }
+  .btn-stop { background:var(--danger); color:#fff; border-color:var(--danger); }
+  .btn-stop:hover:not(:disabled) { background:#991b1b; }
 
-  .section {
-    padding: 14px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    margin-bottom: 4px;
-    background: var(--surface);
-  }
-  .section-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 10px;
-  }
+  .section { padding:14px; border:1px solid var(--border); border-radius:6px; margin-bottom:4px; background:var(--surface); }
+  .section-title { font-size:12px; font-weight:600; color:var(--text); margin-bottom:10px; }
+  .row-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 
-  .coord-box {
-    font-size: 12px;
-    font-family: 'SF Mono', Monaco, Consolas, monospace;
-    color: var(--text);
-    margin-bottom: 10px;
-    padding: 8px 11px;
-    background: var(--bg);
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    word-break: break-all;
-  }
-  .coord-box.empty { color: var(--muted-2); font-style: italic; font-family: inherit; }
+  .coord-box { font-size:12px; font-family:'SF Mono', Monaco, Consolas, monospace; color:var(--text);
+    margin-bottom:10px; padding:8px 11px; background:var(--bg); border-radius:4px; border:1px solid var(--border); word-break:break-all; }
+  .coord-box.empty { color:var(--muted-2); font-style:italic; font-family:inherit; }
 
-  .pk-box {
-    font-size: 12px;
-    color: var(--text);
-    margin-bottom: 10px;
-    padding: 8px 11px;
-    background: var(--bg);
-    border-radius: 4px;
-    border: 1px solid var(--border);
-  }
-  .pk-box.empty { color: var(--muted-2); font-style: italic; }
+  .level-bar { height:20px; background:var(--surface-2); border-radius:4px; overflow:hidden;
+    margin-bottom:8px; position:relative; border:1px solid var(--border); }
+  .level-fill { height:100%; width:0%; background:var(--accent); transition:width .1s; }
+  .level-text { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:600; color:var(--text); }
 
-  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  #alertBox { display:none; background:#fef2f2; color:var(--danger);
+    padding:10px; border-radius:4px; margin-bottom:12px; font-size:13px;
+    text-align:center; font-weight:500; border:1px solid var(--danger); }
+  #alertBox.show { display:block; }
 
-  .photo-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
-  .btn-photo {
-    padding: 10px 8px;
-    background: var(--bg);
-    border: 1px solid var(--border-2);
-    border-radius: 4px;
-    color: var(--text);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    font-family: inherit;
-    display: flex; align-items: center; justify-content: center;
-    transition: background .15s, border-color .15s;
-  }
-  .btn-photo:hover:not(:disabled) { background: var(--surface); border-color: var(--accent); }
-  .btn-photo:disabled { opacity: .4; cursor: not-allowed; }
-  .btn-photo.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .btn-photo.primary:hover:not(:disabled) { background: #1d4ed8; border-color: #1d4ed8; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th, td { padding:6px 5px; border-bottom:1px solid var(--border); text-align:left; }
+  th { color:var(--muted); font-weight:500; }
+  tr.alert td { color:var(--danger); font-weight:600; }
 
-  #previewImgs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-  #previewImgs .thumb {
-    position: relative;
-    width: 68px; height: 68px;
-    border-radius: 4px;
-    overflow: hidden;
-    border: 1px solid var(--border-2);
-  }
-  #previewImgs .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  #previewImgs .thumb button {
-    position: absolute;
-    top: 2px; right: 2px;
-    background: rgba(255,255,255,0.95);
-    color: var(--danger);
-    border: 1px solid var(--border-2);
-    width: 18px; height: 18px;
-    border-radius: 3px;
-    font-size: 11px;
-    cursor: pointer;
-    line-height: 1;
-    display: flex; align-items: center; justify-content: center;
-  }
-  #contadorFotos {
-    font-size: 11px;
-    color: var(--muted-2);
-    margin-top: 8px;
-    text-align: center;
-  }
+  .item { padding:12px 14px; background:var(--bg); border:1px solid var(--border);
+    border-radius:6px; margin-bottom:8px; transition:border-color .15s, background .15s; }
+  .item:hover { border-color:var(--border-2); background:var(--surface); }
+  .item .title { font-weight:600; font-size:13px; display:flex; justify-content:space-between;
+    align-items:center; gap:8px; color:var(--text); }
+  .item .desc { font-size:12px; color:var(--muted); margin-top:6px; line-height:1.4; }
+  .item .meta { font-size:11px; color:var(--muted-2); margin-top:8px; display:flex;
+    justify-content:space-between; align-items:center; gap:6px; }
+  .item input { padding:5px 8px; font-size:12px; }
 
-  .filters-title {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--muted);
-    margin-bottom: 8px;
-    margin-top: 16px;
-  }
-  .filters-title:first-child { margin-top: 0; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip {
-    padding: 6px 10px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid var(--border-2);
-    background: var(--bg);
-    color: var(--muted);
-    user-select: none;
-    transition: all .15s;
-    font-family: inherit;
-  }
-  .chip:hover { color: var(--text); }
-  .chip.active { background: var(--surface-2); color: var(--text); border-color: var(--text); }
+  .badge { display:inline-block; padding:2px 7px; border-radius:3px; font-size:10px;
+    font-weight:500; white-space:nowrap; border:1px solid var(--border-2); color:var(--muted); background:var(--bg); }
+  .badge.alto { color:var(--danger); border-color:var(--danger); }
+  .badge.ok   { color:var(--success); border-color:var(--success); }
+  .badge.nueva{ color:var(--muted); border-color:var(--border-2); }
 
-  #lista { margin-top: 8px; }
-  .list-header {
-    display: flex; align-items: center; justify-content: space-between;
-    font-size: 12px; color: var(--muted); font-weight: 500; margin-bottom: 10px;
-  }
-  .item {
-    padding: 12px 14px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    margin-bottom: 8px;
-    transition: border-color .15s, background .15s;
-  }
-  .item:hover { border-color: var(--border-2); background: var(--surface); }
-  .item.cerrada { opacity: .6; }
-  .item .tipo {
-    font-weight: 600; font-size: 13px;
-    display: flex; justify-content: space-between; align-items: center;
-    gap: 8px; color: var(--text);
-    cursor: pointer;
-  }
-  .item .desc { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.4; cursor: pointer; }
-  .item .ubic {
-    font-size: 11px; color: var(--muted); margin-top: 6px;
-    font-family: 'SF Mono', Monaco, Consolas, monospace;
-  }
-  .item .meta {
-    font-size: 11px; color: var(--muted-2); margin-top: 8px;
-    display: flex; justify-content: space-between; align-items: center; gap: 6px;
-  }
-  .item .miniaturas { display: flex; gap: 6px; margin-top: 8px; cursor: pointer; }
-  .item .miniaturas img {
-    width: 40px; height: 40px; object-fit: cover;
-    border-radius: 3px; border: 1px solid var(--border-2);
-  }
+  .empty-state { text-align:center; padding:32px 16px; color:var(--muted-2); font-size:13px; }
 
-  .badge {
-    display: inline-block; padding: 2px 7px; border-radius: 3px;
-    font-size: 10px; font-weight: 500; white-space: nowrap;
-    border: 1px solid var(--border-2);
-    color: var(--muted);
-    background: var(--bg);
-  }
-  .badge.cerrada { color: var(--success); border-color: var(--success); }
-  .badge.activa  { color: var(--danger); border-color: var(--danger); }
+  .list-header { display:flex; align-items:center; justify-content:space-between;
+    font-size:12px; color:var(--muted); font-weight:500; margin-bottom:10px; }
 
-  .btn-cerrar, .btn-reabrir, .btn-ver-mapa {
-    background: transparent;
-    padding: 4px 9px; border-radius: 3px;
-    font-size: 11px; font-weight: 500; cursor: pointer;
-    font-family: inherit;
-    border: 1px solid var(--border-2);
-    color: var(--text);
-  }
-  .btn-cerrar { color: var(--success); border-color: var(--success); }
-  .btn-reabrir { color: var(--warn); border-color: var(--warn); }
-  .btn-ver-mapa { color: var(--muted); }
-  .btn-cerrar:hover { background: #f0fdf4; }
-  .btn-reabrir:hover { background: #fffbeb; }
-  .btn-ver-mapa:hover { background: var(--surface); }
-
-  .empty-state {
-    text-align: center; padding: 32px 16px;
-    color: var(--muted-2); font-size: 13px;
-  }
-
-  .checks { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-  .checks label {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 12px; color: var(--text);
-    background: var(--bg); border: 1px solid var(--border-2);
-    border-radius: 4px; padding: 6px 10px; cursor: pointer;
-    font-weight: 500; margin: 0;
-  }
-  .checks input { margin: 0; accent-color: var(--accent); }
-
-  .btn-export {
-    width: 100%; padding: 11px; border: 1px solid var(--accent); border-radius: 4px;
-    background: var(--accent); color: #fff;
-    font-size: 13px; font-weight: 500; cursor: pointer;
-    margin-top: 8px; font-family: inherit;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .btn-export:hover { background: #1d4ed8; }
-  #exportInfo {
-    font-size: 12px; color: var(--muted);
-    text-align: center; margin-top: 10px;
-  }
-
-  .btn-zip {
-    width: 100%; padding: 11px; border-radius: 4px;
-    background: var(--bg); color: var(--text);
-    border: 1px solid var(--border-2);
-    font-size: 13px; font-weight: 500; cursor: pointer;
-    margin-top: 8px; font-family: inherit;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .btn-zip:hover { background: var(--surface); }
-
-  #modalMapa {
-    display: none; position: fixed; inset: 0; z-index: 9999; background: var(--bg);
-  }
-  #modalMapa.abierto { display: flex; flex-direction: column; }
-  #modalMapaHeader {
-    background: var(--bg); color: var(--text); padding: 14px 20px;
-    display: flex; justify-content: space-between; align-items: center;
-    flex-shrink: 0; border-bottom: 1px solid var(--border);
-  }
-  #modalMapaHeader h2 { font-size: 14px; font-weight: 600; }
-  #modalMapaHeader button {
-    background: transparent; border: 1px solid var(--border-2);
-    color: var(--muted); font-size: 14px; cursor: pointer;
-    padding: 5px 11px; border-radius: 4px; line-height: 1;
-    font-family: inherit;
-  }
-  #modalMapaHeader button:hover { color: var(--text); border-color: var(--text); }
-  #mapSelector { flex: 1; position: relative; }
-  #modalMapaFooter {
-    background: var(--bg); padding: 12px; display: flex; gap: 10px;
-    flex-shrink: 0; border-top: 1px solid var(--border);
-  }
-  #modalMapaFooter button {
-    flex: 1; padding: 11px; border: 1px solid var(--border-2); border-radius: 4px;
-    font-size: 13px; font-weight: 500; cursor: pointer;
-    font-family: inherit; background: var(--bg); color: var(--text);
-  }
-  #btnCancelarUbi { flex: 0 0 120px; }
-  #btnCancelarUbi:hover { background: var(--surface); }
-  #btnConfirmarUbi { background: var(--accent); color: #fff; border-color: var(--accent); }
-  #btnConfirmarUbi:hover { background: #1d4ed8; }
-
-  #instruccionMapa {
-    position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
-    background: rgba(255,255,255,0.96); color: var(--text);
-    padding: 7px 14px; border-radius: 4px; font-size: 12px;
-    font-weight: 500; z-index: 1000; white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(0,0,0,.08);
-    border: 1px solid var(--border);
-  }
-
-  #pinCentral {
-    position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -100%); z-index: 1000;
-    pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,.3));
-  }
-  #pinCentral svg { width: 30px; height: 30px; fill: var(--accent); stroke: #fff; stroke-width: 1.5; }
-
-  .leaflet-popup-content-wrapper {
-    background: #fff; color: var(--text);
-    border-radius: 4px; border: 1px solid var(--border-2);
-    box-shadow: 0 4px 16px rgba(0,0,0,.12);
-  }
-  .leaflet-popup-tip { background: #fff; }
-  .leaflet-popup-content { margin: 12px; font-family: inherit; font-size: 13px; }
-  .leaflet-popup-close-button { color: var(--muted) !important; }
-  .leaflet-control-layers {
-    background: #fff !important; color: var(--text) !important;
-    border-radius: 4px !important; border: 1px solid var(--border-2) !important;
-    font-family: inherit !important; font-size: 12px !important;
-  }
-  .leaflet-control-zoom a {
-    background: #fff !important; color: var(--text) !important;
-    border-color: var(--border-2) !important;
-  }
-  .leaflet-control-zoom a:hover {
-    background: var(--surface) !important; color: var(--accent) !important;
-  }
-
-  @media (max-width: 900px) {
-    #app { flex-direction: column; }
-    #map { display: none; }
-    #panel { width: 100%; flex: 1; border-left: none; }
-    #panel header { padding: 14px 16px; }
-    #tabs button { padding: 12px 4px; font-size: 11px; }
-    .tab-content { padding: 16px; padding-bottom: 24px; }
-  }
-  @media (min-width: 901px) and (max-width: 1200px) {
-    #panel { width: 360px; }
+  @media (max-width:900px) {
+    #app { flex-direction:column; }
+    #map { display:none; }
+    #panel { width:100%; flex:1; border-left:none; }
+    #panel header { padding:14px 16px; }
+    #tabs button { padding:12px 4px; font-size:11px; }
+    .tab-content { padding:16px; padding-bottom:24px; }
   }
 </style>
 </head>
@@ -463,180 +134,115 @@
 
   <aside id="panel">
     <header>
-      <h1>Incidencias en carretera</h1>
+      <h1>Vigilante de juntas</h1>
       <span class="version">v1.0</span>
     </header>
 
     <div id="tabs">
-      <button data-tab="nueva" class="active">Nueva</button>
-      <button data-tab="lista">Lista</button>
-      <button data-tab="excel">Exportar</button>
+      <button data-tab="ruta" class="active">Ruta</button>
+      <button data-tab="juntas">Juntas</button>
+      <button data-tab="analisis">Análisis</button>
     </div>
 
-    <div class="tab-content active" id="tab-nueva">
-
+    <!-- ═══════ PESTAÑA RUTA ═══════ -->
+    <div class="tab-content active" id="tab-ruta">
       <div class="section">
-        <div class="section-title">Ubicación</div>
-        <div id="coordsTexto" class="coord-box empty">Sin ubicación seleccionada</div>
-        <button class="btn btn-ubi" id="btnElegirUbi">Elegir en el mapa</button>
-        <button class="btn btn-secondary" id="btnUbicacion">Usar mi ubicación</button>
-      </div>
-
-      <div class="section">
-        <div class="section-title">Carretera y PK</div>
-        <div id="estadoCSV" class="coord-box empty" style="margin-bottom:10px;">Cargando CSV de PKs...</div>
-        <div id="pkSugerido" class="pk-box empty">Marca una ubicación para ver el PK sugerido</div>
+        <div class="section-title">Parámetros</div>
         <div class="row-2">
           <div>
-            <label for="carretera">Carretera</label>
-            <input type="text" id="carretera" placeholder="LR-111" />
+            <label for="nivelGolpe">Nivel golpe audio</label>
+            <input type="number" id="nivelGolpe" value="45" min="10" max="100">
           </div>
           <div>
-            <label for="pk">PK</label>
-            <input type="text" id="pk" placeholder="12.400" />
+            <label for="umbralAcel">Aceleración (m/s²)</label>
+            <input type="number" id="umbralAcel" value="15" min="5" max="50">
           </div>
         </div>
+        <div class="row-2">
+          <div>
+            <label for="radio">Radio junta (m)</label>
+            <input type="number" id="radio" value="20" min="5" max="100">
+          </div>
+          <div>
+            <label for="umbral">Umbral alerta (%)</label>
+            <input type="number" id="umbral" value="25" min="5" max="200">
+          </div>
+        </div>
+        <label for="diasMedia">Días para la media</label>
+        <input type="number" id="diasMedia" value="5" min="2" max="30">
       </div>
 
-      <label for="tipo">Tipo de incidencia</label>
-      <select id="tipo">
-        <option value="senalizacion">Señalización vertical</option>
-        <option value="firme">Firme</option>
-        <option value="barrera">Barrera</option>
-        <option value="animal">Animal</option>
-        <option value="accidente">Accidente</option>
-        <option value="otro">Otro</option>
-      </select>
-
-      <label for="desc">Descripción</label>
-      <textarea id="desc" placeholder="Describe brevemente la incidencia..."></textarea>
-
-      <label for="gravedad">Gravedad</label>
-      <select id="gravedad">
-        <option value="1">1 — Leve</option>
-        <option value="2">2 — Baja</option>
-        <option value="3" selected>3 — Media</option>
-        <option value="4">4 — Alta</option>
-        <option value="5">5 — Grave</option>
-      </select>
-
-      <label>Imágenes (máx. 3)</label>
-      <div class="photo-actions">
-        <button type="button" class="btn-photo primary" id="btnHacerFoto">Hacer foto</button>
-        <button type="button" class="btn-photo" id="btnGaleria">Galería</button>
+      <div class="section">
+        <div class="section-title">Estado</div>
+        <div class="level-bar"><div class="level-fill" id="levelFill"></div><div class="level-text" id="levelText">—</div></div>
+        <div class="coord-box" id="status">Inicializando...</div>
+        <div class="coord-box" id="gpsInfo">GPS: —</div>
       </div>
 
-      <input type="file" id="inputCamara" accept="image/*" capture="environment" style="display:none" />
-      <input type="file" id="inputGaleria" accept="image/*" multiple style="display:none" />
-
-      <div id="previewImgs"></div>
-      <div id="contadorFotos">0 / 3 imágenes</div>
-
-      <button class="btn btn-primary" id="btnAdd" disabled style="margin-top:20px;">
-        Guardar incidencia
-      </button>
+      <button id="startBtn" class="btn btn-go" disabled>Iniciar ruta</button>
+      <button id="stopBtn" class="btn btn-stop" style="display:none;">Detener ruta</button>
     </div>
 
-    <div class="tab-content" id="tab-lista">
-      <div class="filters-title">Filtrar por tipo</div>
-      <div class="chips" id="chipsTipo"></div>
+    <!-- ═══════ PESTAÑA JUNTAS ═══════ -->
+    <div class="tab-content" id="tab-juntas">
+      <div class="coord-box" id="estadoCSV">Cargando CSV de PKs...</div>
 
-      <div class="filters-title">Filtrar por estado</div>
-      <div class="chips">
-        <span class="chip active" data-estado="activa">Activas</span>
-        <span class="chip active" data-estado="cerrada">Cerradas</span>
+      <div class="list-header">
+        <span>Juntas detectadas</span>
+        <span id="contadorJuntas">0</span>
       </div>
-
-      <div id="lista">
-        <div class="list-header">
-          <span>Incidencias</span>
-          <span id="contador">0</span>
-        </div>
-        <div id="items"></div>
+      <div id="listaJuntas">
+        <div class="empty-state">Aún no hay juntas detectadas</div>
       </div>
     </div>
 
-    <div class="tab-content" id="tab-excel">
-      <div class="section-title" style="margin-bottom:12px;">Exportar a Excel</div>
+    <!-- ═══════ PESTAÑA ANÁLISIS ═══════ -->
+    <div class="tab-content" id="tab-analisis">
+      <div id="alertBox"></div>
 
-      <div class="row-2">
-        <div>
-          <label>Desde</label>
-          <input type="date" id="expDesde">
-        </div>
-        <div>
-          <label>Hasta</label>
-          <input type="date" id="expHasta">
-        </div>
+      <div class="list-header">
+        <span>Comparación por junta</span>
+        <span id="contadorEventos">0</span>
       </div>
+      <div id="tablaAnalisis"><div class="empty-state">Sin datos</div></div>
 
-      <label style="margin-top:16px;">Tipos a incluir</label>
-      <div class="checks" id="expTipos"></div>
-
-      <label>Estado</label>
-      <select id="expEstado">
-        <option value="todas">Todas</option>
-        <option value="activa">Solo activas</option>
-        <option value="cerrada">Solo cerradas</option>
-      </select>
-
-      <button class="btn-export" id="btnExportar" style="margin-top:20px;">
-        Descargar Excel
-      </button>
-
-      <button class="btn-zip" id="btnExportarFotos">
-        Descargar fotos (ZIP)
-      </button>
-
-      <div id="exportInfo"></div>
+      <label style="margin-top:20px;">Exportar</label>
+      <button class="btn btn-primary" id="downloadBtn" disabled>Descargar CSV de eventos</button>
+      <button class="btn" id="downloadJuntasBtn" disabled>Descargar CSV de juntas</button>
+      <button class="btn btn-danger" id="clearBtn">Borrar todos los datos</button>
     </div>
   </aside>
 </div>
 
-<div id="modalMapa">
-  <div id="modalMapaHeader">
-    <h2>Selecciona la ubicación</h2>
-    <button id="btnCerrarModal">✕</button>
-  </div>
-  <div id="mapSelector">
-    <div id="instruccionMapa">Mueve el mapa para centrar el pin</div>
-    <div id="pinCentral">
-      <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="#fff" stroke="none"/></svg>
-    </div>
-  </div>
-  <div id="modalMapaFooter">
-    <button id="btnCancelarUbi">Cancelar</button>
-    <button id="btnConfirmarUbi">Confirmar aquí</button>
-  </div>
-</div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+(() => {
   // ═════════════════════════════════════════
   // SUPABASE
   // ═════════════════════════════════════════
-  const SUPABASE_URL = 'https://zqmuuqtoksewhpenzslh.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_zuN7I91_y_hVvtsrfj8Tlg_AwLIIAGr';
+  const SUPABASE_URL = 'https://yacyxoxkggavyeyglzzh.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_rfoOb8wFQP6WwUSoaGF_WA_eA_PfF5O';
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   // ═════════════════════════════════════════
-  // CONFIG UTM
+  // UTM 30N
   // ═════════════════════════════════════════
   proj4.defs('EPSG:25830', '+proj=utm +zone=30 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs');
-
   function utm30aLatLng(x, y) {
     const [lng, lat] = proj4('EPSG:25830', 'EPSG:4326', [x, y]);
     return { lat, lng };
   }
-
   function distanciaMetros(lat1, lng1, lat2, lng2) {
-    const R = 6371000;
-    const rad = Math.PI / 180;
-    const dLat = (lat2 - lat1) * rad;
-    const dLng = (lng2 - lng1) * rad;
-    const a = Math.sin(dLat/2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng/2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const R = 6371000, rad = Math.PI/180;
+    const dLat = (lat2-lat1)*rad, dLng = (lng2-lng1)*rad;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*rad)*Math.cos(lat2*rad)*Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   }
+
+  const $ = id => document.getElementById(id);
+  const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  const hoy = () => new Date().toISOString().slice(0,10);
+  const setStatus = m => $('status').textContent = m;
 
   // ═════════════════════════════════════════
   // CSV DE PKs
@@ -644,45 +250,32 @@
   let pksCargados = [];
 
   async function cargarCSV() {
-    const estado = document.getElementById('estadoCSV');
+    const el = $('estadoCSV');
     try {
-      const respuesta = await fetch('pks.csv');
-      if (!respuesta.ok) throw new Error('HTTP ' + respuesta.status);
-      const texto = await respuesta.text();
-
-      const parsed = Papa.parse(texto, {
-        header: true,
-        skipEmptyLines: true,
-        transformHeader: h => h.trim().toLowerCase()
-      });
-
-      pksCargados = parsed.data
-        .map(fila => {
-          const carretera = (fila.codigoc || fila.carretera || '').toString().trim();
-          const pk = parseFloat((fila.pk_hect || fila.pk || '').toString().replace(',', '.'));
-          const x = parseFloat((fila.x || fila.utm_x || '').toString().replace(',', '.'));
-          const y = parseFloat((fila.y || fila.utm_y || '').toString().replace(',', '.'));
-          if (!carretera || isNaN(pk) || isNaN(x) || isNaN(y)) return null;
-          const { lat, lng } = utm30aLatLng(x, y);
-          return { carretera, pk, lat, lng };
-        })
-        .filter(Boolean);
-
-      if (pksCargados.length === 0) throw new Error('CSV sin filas válidas');
-
-      estado.className = 'coord-box';
-      estado.style.color = 'var(--success)';
-      estado.textContent = `${pksCargados.length} PKs cargados`;
+      const r = await fetch('pks.csv');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const texto = await r.text();
+      const parsed = Papa.parse(texto, { header:true, skipEmptyLines:true, transformHeader:h=>h.trim().toLowerCase() });
+      pksCargados = parsed.data.map(f => {
+        const carretera = (f.codigoc || f.carretera || '').toString().trim();
+        const pk = parseFloat((f.pk_hect || f.pk || '').toString().replace(',','.'));
+        const x = parseFloat((f.x || f.utm_x || '').toString().replace(',','.'));
+        const y = parseFloat((f.y || f.utm_y || '').toString().replace(',','.'));
+        if (!carretera || isNaN(pk) || isNaN(x) || isNaN(y)) return null;
+        const { lat, lng } = utm30aLatLng(x, y);
+        return { carretera, pk, lat, lng };
+      }).filter(Boolean);
+      if (!pksCargados.length) throw new Error('sin filas válidas');
+      el.className = 'coord-box'; el.style.color = 'var(--success)';
+      el.textContent = `${pksCargados.length} PKs cargados`;
     } catch (err) {
-      estado.className = 'coord-box';
-      estado.style.color = 'var(--warn)';
-      estado.textContent = `No se pudo cargar pks.csv (${err.message})`;
-      console.warn('Error CSV:', err);
+      el.className = 'coord-box'; el.style.color = 'var(--warn)';
+      el.textContent = `No se pudo cargar pks.csv (${err.message})`;
     }
   }
 
   function buscarPKCercano(lat, lng, maxMetros = 500) {
-    if (pksCargados.length === 0) return null;
+    if (!pksCargados.length) return null;
     let mejor = null, mejorDist = Infinity;
     for (const p of pksCargados) {
       const d = distanciaMetros(lat, lng, p.lat, p.lng);
@@ -692,289 +285,402 @@
   }
 
   // ═════════════════════════════════════════
-  // MAPA — centrado en La Rioja
+  // MAPA — La Rioja
   // ═════════════════════════════════════════
   const CENTRO_LA_RIOJA = [42.4627, -2.4449];
-
   const pnoa = L.tileLayer.wms('https://www.ign.es/wms-inspire/pnoa-ma', {
-    layers: 'OI.OrthoimageCoverage', format: 'image/jpeg', transparent: false,
-    attribution: 'PNOA © IGN España', maxZoom: 20
+    layers:'OI.OrthoimageCoverage', format:'image/jpeg', transparent:false,
+    attribution:'PNOA © IGN España', maxZoom:20
   });
   const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap', maxZoom: 19
+    attribution:'© OpenStreetMap', maxZoom:19
   });
+  const map = L.map('map', { center:CENTRO_LA_RIOJA, zoom:10, layers:[pnoa], tap:true, touchZoom:true });
+  L.control.layers({ "Ortofoto PNOA":pnoa, "Mapa de calles":osm }).addTo(map);
 
-  const map = L.map('map', {
-    center: CENTRO_LA_RIOJA, zoom: 10, layers: [pnoa],
-    tap: true, touchZoom: true
-  });
-  L.control.layers({ "Ortofoto PNOA": pnoa, "Mapa de calles": osm }).addTo(map);
+  let pathPolyline = L.polyline([], { color:'#2563eb', weight:3, opacity:.5 }).addTo(map);
+  let juntaLayer = L.layerGroup().addTo(map);
 
   // ═════════════════════════════════════════
   // ESTADO
   // ═════════════════════════════════════════
-  let incidencias = [];
-  let puntoSeleccionado = null;
-  let imagenesPendientes = [];
-  const marcadores = {};
-
-  const TIPOS = {
-    senalizacion: { color: '#6b7280', label: 'Señalización vertical' },
-    firme:        { color: '#374151', label: 'Firme' },
-    barrera:      { color: '#4b5563', label: 'Barrera' },
-    animal:       { color: '#52525b', label: 'Animal' },
-    accidente:    { color: '#7f1d1d', label: 'Accidente' },
-    otro:         { color: '#9ca3af', label: 'Otro' }
-  };
-
-  let filtrosTipo = new Set(Object.keys(TIPOS));
-  let filtrosEstado = new Set(['activa', 'cerrada']);
+  let eventos = [];        // { id, ts, junta_id, nivel, lat, lon, acc, alerta, tipo }
+  let juntas = {};         // junta_id -> { junta_id, carretera, pk, lat, lng, nombre_personalizado }
+  let audioContext, analyser, micStream;
+  let watchId = null, running = false, ultimaPos = null, ultimoGolpeTs = 0, sampleTimer = null;
 
   // ═════════════════════════════════════════
-  // SUPABASE: CARGA / SUSCRIPCIÓN
+  // SUPABASE: CARGA
   // ═════════════════════════════════════════
-  async function cargarIncidencias() {
-    const { data, error } = await supabaseClient
-      .from('incidencias')
-      .select('*')
-      .order('fecha', { ascending: false });
+  async function cargarTodo() {
+    setStatus('Cargando datos...');
+    const [evRes, juRes] = await Promise.all([
+      supabaseClient.from('eventos').select('*').order('ts', { ascending:false }),
+      supabaseClient.from('juntas').select('*')
+    ]);
+    if (evRes.error) { setStatus('Error eventos: ' + evRes.error.message); return; }
+    if (juRes.error) { setStatus('Error juntas: ' + juRes.error.message); return; }
 
-    if (error) {
-      console.error('Error cargando incidencias:', error);
-      return;
-    }
+    eventos = evRes.data || [];
+    juntas = {};
+    (juRes.data || []).forEach(j => { juntas[j.junta_id] = j; });
 
-    incidencias = (data || []).map(item => ({
-      ...item,
-      desc: item.descripcion || '',
-      cerradaEn: item.cerrada_en,
-      imagenes: item.imagenes || []
-    }));
-
-    renderizarTodo();
+    renderTodo();
+    setStatus(`✅ ${eventos.length} eventos · ${Object.keys(juntas).length} juntas`);
+    $('downloadBtn').disabled = eventos.length === 0;
+    $('downloadJuntasBtn').disabled = Object.keys(juntas).length === 0;
   }
 
-  function suscribirseCambios() {
-    supabaseClient
-      .channel('cambios-incidencias')
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'incidencias' },
-        () => { cargarIncidencias(); }
-      )
-      .subscribe();
-  }
-
-  async function guardarIncidenciaSupabase(inc) {
-    const { error } = await supabaseClient.from('incidencias').insert([{
-      id: inc.id,
-      tipo: inc.tipo,
-      descripcion: inc.desc,
-      gravedad: inc.gravedad,
-      lat: inc.lat,
-      lng: inc.lng,
-      carretera: inc.carretera,
-      pk: inc.pk,
-      estado: inc.estado,
-      fecha: inc.fecha,
-      imagenes: inc.imagenes
-    }]);
-    if (error) {
-      console.error('Error guardando:', error);
-      alert('No se pudo guardar en la nube: ' + error.message);
-      return false;
-    }
+  async function guardarEvento(ev) {
+    const { error } = await supabaseClient.from('eventos').insert([ev]);
+    if (error) { console.error(error); setStatus('Error guardando: ' + error.message); return false; }
     return true;
   }
 
-  async function actualizarIncidenciaSupabase(id, cambios) {
-    const { error } = await supabaseClient.from('incidencias').update(cambios).eq('id', id);
-    if (error) console.error('Error actualizando:', error);
+  async function guardarJunta(j) {
+    const { error } = await supabaseClient.from('juntas').upsert([{
+      junta_id: j.junta_id,
+      carretera: j.carretera || null,
+      pk: j.pk || null,
+      lat: j.lat, lng: j.lng,
+      nombre_personalizado: j.nombre_personalizado || null
+    }], { onConflict: 'junta_id' });
+    if (error) { console.error(error); setStatus('Error junta: ' + error.message); return false; }
+    return true;
+  }
+
+  async function borrarTodo() {
+    if (!confirm('¿Borrar TODOS los eventos y juntas de la nube?')) return;
+    await supabaseClient.from('eventos').delete().neq('id', 0);
+    await supabaseClient.from('juntas').delete().neq('junta_id', '');
+    eventos = []; juntas = {};
+    renderTodo();
+    $('downloadBtn').disabled = true;
+    $('downloadJuntasBtn').disabled = true;
+    setStatus('✅ Nube vaciada');
   }
 
   // ═════════════════════════════════════════
-  // ICONO + POPUP
+  // SENSORES
   // ═════════════════════════════════════════
-  function crearIcono(inc) {
-    const cfg = TIPOS[inc.tipo] || TIPOS.otro;
-    const size = 20 + inc.gravedad * 2;
-    const cerradaStyle = inc.estado === 'cerrada' ? 'opacity:.4;' : '';
-    return L.divIcon({
-      className: '',
-      html: `<div style="${cerradaStyle}
-        background:${cfg.color};
-        width:${size}px;height:${size}px;
-        border-radius:50%;
-        border:2px solid #fff;
-        box-shadow:0 1px 3px rgba(0,0,0,.3);
-        display:flex;align-items:center;justify-content:center;">
-        <span style="color:#fff;font-size:${size*0.5}px;font-weight:600;">${inc.gravedad}</span>
-      </div>`,
-      iconSize: [size, size],
-      iconAnchor: [size/2, size]
+  async function initSensors() {
+    if (!isMobile) { setStatus('Modo PC · solo visualización'); return; }
+    try {
+      setStatus('Solicitando micrófono...');
+      micStream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false } });
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const src = audioContext.createMediaStreamSource(micStream);
+      analyser = audioContext.createAnalyser(); analyser.fftSize = 1024; src.connect(analyser);
+      setStatus('Comprobando GPS...');
+      navigator.geolocation.getCurrentPosition(
+        () => { $('gpsInfo').textContent = 'GPS: OK'; $('startBtn').disabled = false; setStatus('Listo ✅ Inicia la ruta'); },
+        (err) => { $('gpsInfo').textContent = 'GPS: ✗ ' + err.message; setStatus('❌ GPS: ' + err.message); },
+        { enableHighAccuracy:true, timeout:10000 }
+      );
+    } catch (err) { setStatus('❌ ' + err.message); }
+  }
+
+  function nivelAudio() {
+    const buf = new Uint8Array(analyser.fftSize);
+    analyser.getByteTimeDomainData(buf);
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) { const v = (buf[i]-128)/128; sum += v*v; }
+    return Math.min(100, Math.max(1, Math.round(Math.sqrt(sum/buf.length)*200)));
+  }
+
+  async function iniciarAcelerometro() {
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      try {
+        const p = await DeviceMotionEvent.requestPermission();
+        if (p !== 'granted') { setStatus('Permiso acelerómetro denegado'); return; }
+      } catch { setStatus('Error permiso acelerómetro'); return; }
+    }
+    window.addEventListener('devicemotion', (event) => {
+      if (!running) return;
+      const acc = event.accelerationIncludingGravity;
+      if (acc && acc.x !== null) {
+        const mag = Math.sqrt(acc.x**2 + acc.y**2 + acc.z**2);
+        const umbralAcel = parseFloat($('umbralAcel').value) || 15;
+        if (mag > umbralAcel && Date.now() - ultimoGolpeTs > 1500 && ultimaPos) {
+          ultimoGolpeTs = Date.now();
+          registrarEvento(new Date().toISOString(), Math.min(100, Math.round(mag*3)), ultimaPos, 'acelerometro');
+        }
+      }
     });
   }
 
-  function popupHtml(inc) {
-    const cfg = TIPOS[inc.tipo] || TIPOS.otro;
-    const imgsHtml = (inc.imagenes || []).slice(0, 3).map(src =>
-      `<img src="${src}" style="width:60px;height:60px;object-fit:cover;border-radius:3px;margin:2px;cursor:pointer;border:1px solid #e2e2e5;" onclick="window.open('${src}','_blank')">`
-    ).join('');
-    const ubic = (inc.carretera || inc.pk) ?
-      `<div style="margin:8px 0;padding:5px 8px;background:#f7f7f8;border-radius:3px;border:1px solid #e2e2e5;font-size:12px;color:#1a1a1d;font-family:monospace;">
-        ${inc.carretera || '—'} · PK ${inc.pk || '—'}
-      </div>` : '';
-    return `
-      <div style="min-width:220px;">
-        <div style="font-weight:600;font-size:13px;margin-bottom:6px;">${cfg.label}</div>
-        <span class="badge ${inc.estado}">${inc.estado}</span>
-        ${ubic}
-        <div style="font-size:12px;color:#6b6b73;margin:8px 0;line-height:1.4;">${inc.desc || '<em>Sin descripción</em>'}</div>
-        <div style="font-size:11px;color:#9a9aa2;font-family:monospace;">Gravedad ${inc.gravedad}/5</div>
-        <div style="font-size:11px;color:#9a9aa2;font-family:monospace;">Inicio: ${new Date(inc.fecha).toLocaleString('es-ES')}</div>
-        ${inc.cerradaEn ? `<div style="font-size:11px;color:#9a9aa2;font-family:monospace;">Cierre: ${new Date(inc.cerradaEn).toLocaleString('es-ES')}</div>` : ''}
-        ${imgsHtml ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;">${imgsHtml}</div>` : ''}
-        <div style="margin-top:10px;">
-          ${inc.estado === 'activa'
-            ? `<button class="btn-cerrar" onclick="window.cerrarIncidencia('${inc.id}')">Cerrar incidencia</button>`
-            : `<button class="btn-reabrir" onclick="window.reabrirIncidencia('${inc.id}')">Reabrir</button>`}
-        </div>
-      </div>
-    `;
+  function loop() {
+    if (!running) return;
+    const nivel = nivelAudio();
+    $('levelFill').style.width = nivel + '%';
+    $('levelText').textContent = `Audio: ${nivel}`;
+    const ts = new Date().toISOString();
+    const umbralGolpe = parseInt($('nivelGolpe').value) || 45;
+    if (nivel >= umbralGolpe && Date.now() - ultimoGolpeTs > 1500 && ultimaPos) {
+      ultimoGolpeTs = Date.now();
+      registrarEvento(ts, nivel, ultimaPos, 'audio');
+    }
+    sampleTimer = setTimeout(loop, 1000);
   }
 
-  function añadirMarcador(inc) {
-    const marker = L.marker([inc.lat, inc.lng], { icon: crearIcono(inc) })
-      .addTo(map)
-      .bindPopup(popupHtml(inc));
-    marcadores[inc.id] = marker;
-    return marker;
+  // ═════════════════════════════════════════
+  // DETECCIÓN DE JUNTA
+  // ═════════════════════════════════════════
+  function buscarJuntaCercana(lat, lng, radio) {
+    for (const id in juntas) {
+      const j = juntas[id];
+      if (distanciaMetros(lat, lng, j.lat, j.lng) <= radio) return j;
+    }
+    return null;
+  }
+
+  async function registrarEvento(ts, nivel, pos, tipo) {
+    const radio = parseInt($('radio').value) || 20;
+    let junta = buscarJuntaCercana(pos.lat, pos.lon || pos.lng, radio);
+
+    if (!junta) {
+      // Nueva junta: buscar PK cercano y crear
+      const pk = buscarPKCercano(pos.lat, pos.lon || pos.lng);
+      const juntaId = 'J-' + Date.now().toString(36).slice(-6);
+      junta = {
+        junta_id: juntaId,
+        carretera: pk ? pk.carretera : null,
+        pk: pk ? pk.pk.toFixed(3) : null,
+        lat: pos.lat, lng: pos.lon || pos.lng,
+        nombre_personalizado: null
+      };
+      juntas[juntaId] = junta;
+      await guardarJunta(junta);
+    }
+
+    const ev = {
+      ts, junta_id: junta.junta_id, nivel,
+      lat: pos.lat, lon: pos.lon || pos.lng, acc: pos.acc,
+      alerta: false, tipo
+    };
+    const ok = await guardarEvento(ev);
+    if (ok) {
+      eventos.unshift({ ...ev, id: Date.now() });
+      renderTodo();
+      $('downloadBtn').disabled = false;
+      $('downloadJuntasBtn').disabled = false;
+    }
+  }
+
+  // ═════════════════════════════════════════
+  // INICIAR / PARAR
+  // ═════════════════════════════════════════
+  async function iniciarRuta() {
+    if (running) return;
+    running = true;
+    $('startBtn').style.display = 'none';
+    $('stopBtn').style.display = 'flex';
+    setStatus('🟢 Ruta en curso...');
+
+    await iniciarAcelerometro();
+
+    watchId = navigator.geolocation.watchPosition(
+      (p) => {
+        ultimaPos = { lat:p.coords.latitude, lon:p.coords.longitude, lng:p.coords.longitude, acc:p.coords.accuracy };
+        $('gpsInfo').textContent = `GPS: ±${Math.round(p.coords.accuracy)}m`;
+        pathPolyline.addLatLng([ultimaPos.lat, ultimaPos.lng]);
+      },
+      () => { $('gpsInfo').textContent = 'GPS: ✗'; },
+      { enableHighAccuracy:true, maximumAge:0, timeout:15000 }
+    );
+    loop();
+  }
+
+  function pararRuta() {
+    running = false;
+    if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+    if (sampleTimer) { clearTimeout(sampleTimer); sampleTimer = null; }
+    $('startBtn').style.display = 'flex';
+    $('stopBtn').style.display = 'none';
+    setStatus('⏹ Ruta detenida');
+    cargarTodo();
   }
 
   // ═════════════════════════════════════════
   // RENDER
   // ═════════════════════════════════════════
-  function renderizarTodo() {
-    Object.values(marcadores).forEach(m => map.removeLayer(m));
-    Object.keys(marcadores).forEach(k => delete marcadores[k]);
+  function renderTodo() {
+    renderMapa();
+    renderListaJuntas();
+    renderAnalisis();
+    $('contadorEventos').textContent = eventos.length;
+    $('contadorJuntas').textContent = Object.keys(juntas).length;
+  }
 
-    const visibles = incidencias.filter(inc =>
-      filtrosTipo.has(inc.tipo) && filtrosEstado.has(inc.estado)
-    );
-    visibles.forEach(añadirMarcador);
+  function renderMapa() {
+    juntaLayer.clearLayers();
+    for (const id in juntas) {
+      const j = juntas[id];
+      const nombre = j.nombre_personalizado || j.junta_id;
+      const subtitulo = (j.carretera ? j.carretera : '') + (j.pk ? ' · PK ' + j.pk : '');
+      L.circleMarker([j.lat, j.lng], {
+        radius:8, color:'#2563eb', fillColor:'#2563eb', fillOpacity:.7, weight:2
+      }).bindPopup(`<b>${nombre}</b><br>${subtitulo || 'sin datos'}`).addTo(juntaLayer);
+    }
+  }
 
-    const items = document.getElementById('items');
-    items.innerHTML = '';
+  function renderListaJuntas() {
+    const cont = $('listaJuntas');
+    const ids = Object.keys(juntas);
+    if (!ids.length) { cont.innerHTML = '<div class="empty-state">Aún no hay juntas detectadas</div>'; return; }
 
-    if (visibles.length === 0) {
-      items.innerHTML = '<div class="empty-state">No hay incidencias que coincidan con los filtros</div>';
-    } else {
-      visibles.forEach(inc => {
-        const cfg = TIPOS[inc.tipo] || TIPOS.otro;
-        const div = document.createElement('div');
-        div.className = 'item' + (inc.estado === 'cerrada' ? ' cerrada' : '');
-        const minis = (inc.imagenes || []).slice(0, 3).map(src => `<img src="${src}">`).join('');
-        const ubic = (inc.carretera || inc.pk) ?
-          `<div class="ubic">${inc.carretera || '—'} · PK ${inc.pk || '—'}</div>` : '';
-        div.innerHTML = `
-          <div class="tipo" onclick="window.verEnMapa('${inc.id}')">
-            <span>${cfg.label}</span>
-            <span class="badge ${inc.estado}">${inc.estado}</span>
+    cont.innerHTML = '';
+    ids.forEach(id => {
+      const j = juntas[id];
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `
+        <div class="title">
+          <span>${j.nombre_personalizado || j.junta_id}</span>
+          <span class="badge">${j.junta_id}</span>
+        </div>
+        <div class="desc">${j.lat.toFixed(5)}, ${j.lng.toFixed(5)}</div>
+        <div class="row-2" style="margin-top:8px;">
+          <div>
+            <label style="margin-top:0;">Carretera</label>
+            <input type="text" data-id="${id}" data-field="carretera" value="${j.carretera || ''}" placeholder="LR-111">
           </div>
-          ${ubic}
-          <div class="desc" onclick="window.verEnMapa('${inc.id}')">${inc.desc || '<em>Sin descripción</em>'}</div>
-          ${minis ? `<div class="miniaturas" onclick="window.verEnMapa('${inc.id}')">${minis}</div>` : ''}
-          <div class="meta">
-            <span>Gravedad ${inc.gravedad}/5</span>
-            <div style="display:flex; gap:6px;">
-              <button class="btn-ver-mapa" onclick="event.stopPropagation();window.verEnMapa('${inc.id}')">Ver mapa</button>
-              ${inc.estado === 'activa'
-                ? `<button class="btn-cerrar" onclick="event.stopPropagation();window.cerrarIncidencia('${inc.id}')">Cerrar</button>`
-                : `<button class="btn-reabrir" onclick="event.stopPropagation();window.reabrirIncidencia('${inc.id}')">Reabrir</button>`}
-            </div>
+          <div>
+            <label style="margin-top:0;">PK</label>
+            <input type="text" data-id="${id}" data-field="pk" value="${j.pk || ''}" placeholder="12.400">
           </div>
-        `;
-        items.appendChild(div);
+        </div>
+        <label style="margin-top:8px;">Nombre personalizado</label>
+        <input type="text" data-id="${id}" data-field="nombre_personalizado" value="${j.nombre_personalizado || ''}" placeholder="Ej. Junta puente Ebro">
+        <div style="display:flex;gap:6px;margin-top:8px;">
+          <button class="btn" style="margin-top:0;flex:1;" data-action="buscar-pk" data-id="${id}">Buscar PK</button>
+          <button class="btn btn-primary" style="margin-top:0;flex:1;" data-action="guardar" data-id="${id}">Guardar</button>
+        </div>
+      `;
+      cont.appendChild(div);
+    });
+
+    cont.querySelectorAll('button[data-action]').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.dataset.id;
+        const j = juntas[id];
+        if (btn.dataset.action === 'guardar') {
+          const inputs = cont.querySelectorAll(`input[data-id="${id}"]`);
+          inputs.forEach(inp => { j[inp.dataset.field] = inp.value.trim() || null; });
+          const ok = await guardarJunta(j);
+          if (ok) setStatus('✅ Junta guardada');
+        } else if (btn.dataset.action === 'buscar-pk') {
+          const pk = buscarPKCercano(j.lat, j.lng);
+          if (pk) {
+            const inputs = cont.querySelectorAll(`input[data-id="${id}"]`);
+            inputs.forEach(inp => {
+              if (inp.dataset.field === 'carretera') inp.value = pk.carretera;
+              if (inp.dataset.field === 'pk') inp.value = pk.pk.toFixed(3);
+            });
+            setStatus(`PK encontrado a ${Math.round(pk.distancia)}m`);
+          } else {
+            setStatus('Sin PK cercano (>500m)');
+          }
+        }
+      };
+    });
+  }
+
+  function renderAnalisis() {
+    const umbral = parseInt($('umbral').value) || 25;
+    const diasN = parseInt($('diasMedia').value) || 5;
+    const hoyKey = hoy();
+
+    const porJunta = {};
+    eventos.forEach(e => { if (e.junta_id) (porJunta[e.junta_id] ??= []).push(e); });
+
+    const filas = [];
+    let algunaAlerta = false;
+    $('alertBox').classList.remove('show');
+
+    for (const [juntaId, evs] of Object.entries(porJunta)) {
+      const porDia = {};
+      evs.forEach(e => { const d = e.ts.slice(0,10); porDia[d] = Math.max(porDia[d] || 0, e.nivel); });
+      const hoyMax = porDia[hoyKey];
+      if (hoyMax == null) continue;
+      const previos = Object.entries(porDia).filter(([d]) => d !== hoyKey)
+        .sort((a,b) => b[0].localeCompare(a[0])).slice(0, diasN);
+      const j = juntas[juntaId];
+      const nombre = j?.nombre_personalizado || juntaId;
+      const ubic = j ? `${j.carretera || '—'} · PK ${j.pk || '—'}` : '';
+
+      if (!previos.length) {
+        filas.push({ juntaId, nombre, ubic, hoyMax, media:null, estado:'nueva' });
+        continue;
+      }
+      const media = previos.reduce((s,[,v]) => s+v, 0) / previos.length;
+      const limite = media * (1 + umbral/100);
+      const alerta = hoyMax > limite;
+      if (alerta) algunaAlerta = true;
+      filas.push({
+        juntaId, nombre, ubic, hoyMax, media,
+        variacion: ((hoyMax/media - 1) * 100).toFixed(0),
+        estado: alerta ? 'alto' : 'ok'
       });
     }
 
-    document.getElementById('contador').textContent = visibles.length;
-    actualizarInfoExport();
+    const cont = $('tablaAnalisis');
+    if (!filas.length) { cont.innerHTML = '<div class="empty-state">Sin juntas visitadas hoy</div>'; return; }
+
+    filas.sort((a,b) => (b.estado==='alto') - (a.estado==='alto'));
+    let html = `<table><thead><tr><th>Junta</th><th>Hoy</th><th>Media</th><th>Δ%</th><th></th></tr></thead><tbody>`;
+    filas.forEach(f => {
+      html += `<tr class="${f.estado==='alto'?'alert':''}">
+        <td><b>${f.nombre}</b><br><span style="font-size:10px;color:var(--muted-2)">${f.ubic}</span></td>
+        <td>${f.hoyMax}</td>
+        <td>${f.media!=null ? f.media.toFixed(0) : '—'}</td>
+        <td>${f.variacion ?? '—'}</td>
+        <td><span class="badge ${f.estado}">${f.estado==='alto'?'ALTO':f.estado==='ok'?'OK':'nueva'}</span></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    cont.innerHTML = html;
+
+    if (algunaAlerta) {
+      const juntasAltas = filas.filter(f => f.estado==='alto').map(f => f.nombre).join(', ');
+      $('alertBox').textContent = `⚠️ Nivel elevado en: ${juntasAltas}`;
+      $('alertBox').classList.add('show');
+    }
   }
 
   // ═════════════════════════════════════════
-  // VER EN MAPA
+  // DESCARGA CSV
   // ═════════════════════════════════════════
-  window.verEnMapa = function(id) {
-    const inc = incidencias.find(i => i.id === id);
-    if (!inc) return;
+  function descargarCSV(nombre, header, rows) {
+    const csv = [header, ...rows].map(row =>
+      row.map(v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; }).join(',')
+    ).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type:'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${nombre}_${hoy()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
 
-    if (window.innerWidth > 900) {
-      map.setView([inc.lat, inc.lng], 17);
-      marcadores[inc.id]?.openPopup();
-    } else {
-      if (!mapSelector) {
-        mapSelector = L.map('mapSelector', { zoomControl: true, tap: true });
-        const pnoaSel = L.tileLayer.wms('https://www.ign.es/wms-inspire/pnoa-ma', {
-          layers: 'OI.OrthoimageCoverage', format: 'image/jpeg', transparent: false,
-          attribution: 'PNOA © IGN', maxZoom: 20
-        });
-        const osmSel = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap', maxZoom: 19
-        });
-        pnoaSel.addTo(mapSelector);
-        L.control.layers({ "Ortofoto PNOA": pnoaSel, "Mapa de calles": osmSel }).addTo(mapSelector);
-      }
-
-      document.getElementById('modalMapa').classList.add('abierto');
-      document.getElementById('instruccionMapa').style.display = 'none';
-      document.getElementById('pinCentral').style.display = 'none';
-
-      mapSelector.setView([inc.lat, inc.lng], 17);
-
-      if (window.marcadorModal) mapSelector.removeLayer(window.marcadorModal);
-      window.marcadorModal = L.marker([inc.lat, inc.lng], { icon: crearIcono(inc) })
-        .addTo(mapSelector)
-        .bindPopup(popupHtml(inc))
-        .openPopup();
-
-      const btnConfirmar = document.getElementById('btnConfirmarUbi');
-      btnConfirmar.textContent = 'Cerrar mapa';
-      btnConfirmar.onclick = () => {
-        document.getElementById('modalMapa').classList.remove('abierto');
-        if (window.marcadorModal) mapSelector.removeLayer(window.marcadorModal);
-        document.getElementById('instruccionMapa').style.display = 'block';
-        document.getElementById('pinCentral').style.display = 'block';
-        btnConfirmar.textContent = 'Confirmar aquí';
-        btnConfirmar.onclick = confirmarUbicacionFormulario;
-      };
-    }
+  $('downloadBtn').onclick = () => {
+    const header = ['timestamp','junta_id','carretera','pk','tipo','nivel','lat','lon','precision','alerta'];
+    const rows = eventos.map(e => {
+      const j = juntas[e.junta_id] || {};
+      return [e.ts, e.junta_id, j.carretera || '', j.pk || '', e.tipo || 'audio',
+              e.nivel, e.lat, e.lon, e.acc, e.alerta ? 'SI' : ''];
+    });
+    descargarCSV('eventos', header, rows);
   };
 
-  // ═════════════════════════════════════════
-  // CERRAR / REABRIR
-  // ═════════════════════════════════════════
-  window.cerrarIncidencia = async function(id) {
-    const inc = incidencias.find(i => i.id === id);
-    if (!inc) return;
-    const cerradaEn = new Date().toISOString();
-
-    inc.estado = 'cerrada';
-    inc.cerradaEn = cerradaEn;
-    renderizarTodo();
-
-    await actualizarIncidenciaSupabase(id, { estado: 'cerrada', cerrada_en: cerradaEn });
+  $('downloadJuntasBtn').onclick = () => {
+    const header = ['junta_id','carretera','pk','lat','lng','nombre_personalizado'];
+    const rows = Object.values(juntas).map(j => [
+      j.junta_id, j.carretera || '', j.pk || '', j.lat, j.lng, j.nombre_personalizado || ''
+    ]);
+    descargarCSV('juntas', header, rows);
   };
 
-  window.reabrirIncidencia = async function(id) {
-    const inc = incidencias.find(i => i.id === id);
-    if (!inc) return;
-
-    inc.estado = 'activa';
-    delete inc.cerradaEn;
-    renderizarTodo();
-
-    await actualizarIncidenciaSupabase(id, { estado: 'activa', cerrada_en: null });
-  };
+  $('clearBtn').onclick = borrarTodo;
 
   // ═════════════════════════════════════════
   // PESTAÑAS
@@ -984,534 +690,32 @@
       document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
       btn.classList.add('active');
-      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-      if (btn.dataset.tab === 'excel') actualizarInfoExport();
+      $('tab-' + btn.dataset.tab).classList.add('active');
       setTimeout(() => map.invalidateSize(), 100);
     };
   });
 
   // ═════════════════════════════════════════
-  // CHIPS
+  // EVENTOS UI
   // ═════════════════════════════════════════
-  function renderChipsTipo() {
-    const cont = document.getElementById('chipsTipo');
-    cont.innerHTML = '';
-    Object.entries(TIPOS).forEach(([key, cfg]) => {
-      const chip = document.createElement('span');
-      chip.className = 'chip' + (filtrosTipo.has(key) ? ' active' : '');
-      chip.textContent = cfg.label;
-      chip.onclick = () => {
-        if (filtrosTipo.has(key)) filtrosTipo.delete(key);
-        else filtrosTipo.add(key);
-        renderChipsTipo();
-        renderizarTodo();
-      };
-      cont.appendChild(chip);
-    });
-  }
-  document.querySelectorAll('[data-estado]').forEach(chip => {
-    chip.onclick = () => {
-      const e = chip.dataset.estado;
-      if (filtrosEstado.has(e)) filtrosEstado.delete(e);
-      else filtrosEstado.add(e);
-      chip.classList.toggle('active');
-      renderizarTodo();
-    };
-  });
-
-  // ═════════════════════════════════════════
-  // ACTUALIZAR UI
-  // ═════════════════════════════════════════
-  function actualizarPKSugerido() {
-    const el = document.getElementById('pkSugerido');
-    if (!puntoSeleccionado) {
-      el.className = 'pk-box empty';
-      el.textContent = 'Marca una ubicación para ver el PK sugerido';
-      return;
-    }
-    if (pksCargados.length === 0) {
-      el.className = 'pk-box empty';
-      el.textContent = 'Sin CSV de PKs cargado';
-      return;
-    }
-    const encontrado = buscarPKCercano(puntoSeleccionado.lat, puntoSeleccionado.lng);
-    if (encontrado) {
-      el.className = 'pk-box';
-      el.textContent = `${encontrado.carretera} · PK ${encontrado.pk.toFixed(3)}  (a ${Math.round(encontrado.distancia)} m)`;
-      const inCarretera = document.getElementById('carretera');
-      const inPK = document.getElementById('pk');
-      if (!inCarretera.value) inCarretera.value = encontrado.carretera;
-      if (!inPK.value) inPK.value = encontrado.pk.toFixed(3);
-    } else {
-      el.className = 'pk-box empty';
-      el.textContent = 'Sin PK cercano en el CSV (>500 m)';
-    }
-  }
-
-  function actualizarCoordsUI() {
-    const el = document.getElementById('coordsTexto');
-    if (puntoSeleccionado) {
-      el.textContent = `${puntoSeleccionado.lat.toFixed(6)}, ${puntoSeleccionado.lng.toFixed(6)}`;
-      el.classList.remove('empty');
-      document.getElementById('btnAdd').disabled = false;
-      document.getElementById('btnElegirUbi').textContent = 'Cambiar ubicación';
-      document.getElementById('btnElegirUbi').classList.add('ok');
-    } else {
-      el.textContent = 'Sin ubicación seleccionada';
-      el.classList.add('empty');
-      document.getElementById('btnAdd').disabled = true;
-      document.getElementById('btnElegirUbi').textContent = 'Elegir en el mapa';
-      document.getElementById('btnElegirUbi').classList.remove('ok');
-    }
-    actualizarPKSugerido();
-  }
-
-  // ═════════════════════════════════════════
-  // MODAL MAPA (FORMULARIO)
-  // ═════════════════════════════════════════
-  let mapSelector = null;
-
-  function abrirModalMapa() {
-    document.getElementById('modalMapa').classList.add('abierto');
-    document.getElementById('instruccionMapa').style.display = 'block';
-    document.getElementById('pinCentral').style.display = 'block';
-
-    const btnConfirmar = document.getElementById('btnConfirmarUbi');
-    btnConfirmar.textContent = 'Confirmar aquí';
-    btnConfirmar.onclick = confirmarUbicacionFormulario;
-
-    if (!mapSelector) {
-      mapSelector = L.map('mapSelector', {
-        center: puntoSeleccionado ? [puntoSeleccionado.lat, puntoSeleccionado.lng] : CENTRO_LA_RIOJA,
-        zoom: puntoSeleccionado ? 17 : 10,
-        zoomControl: true, tap: true
-      });
-      const pnoaSel = L.tileLayer.wms('https://www.ign.es/wms-inspire/pnoa-ma', {
-        layers: 'OI.OrthoimageCoverage', format: 'image/jpeg', transparent: false,
-        attribution: 'PNOA © IGN', maxZoom: 20
-      });
-      const osmSel = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap', maxZoom: 19
-      });
-      pnoaSel.addTo(mapSelector);
-      L.control.layers({ "Ortofoto PNOA": pnoaSel, "Mapa de calles": osmSel }).addTo(mapSelector);
-    }
-    if (puntoSeleccionado) mapSelector.setView([puntoSeleccionado.lat, puntoSeleccionado.lng], 17);
-    setTimeout(() => mapSelector.invalidateSize(), 150);
-  }
-
-  function cerrarModalMapa() {
-    document.getElementById('modalMapa').classList.remove('abierto');
-    if (window.marcadorModal && mapSelector) {
-      mapSelector.removeLayer(window.marcadorModal);
-    }
-  }
-
-  function confirmarUbicacionFormulario() {
-    const centro = mapSelector.getCenter();
-    puntoSeleccionado = { lat: centro.lat, lng: centro.lng };
-    actualizarCoordsUI();
-    cerrarModalMapa();
-  }
-
-  document.getElementById('btnElegirUbi').onclick = abrirModalMapa;
-  document.getElementById('btnCerrarModal').onclick = cerrarModalMapa;
-  document.getElementById('btnCancelarUbi').onclick = cerrarModalMapa;
-
-  // ═════════════════════════════════════════
-  // CLIC EN MAPA PRINCIPAL
-  // ═════════════════════════════════════════
-  let marcadorTemporal = null;
-  map.on('click', (e) => {
-    puntoSeleccionado = { lat: e.latlng.lat, lng: e.latlng.lng };
-    if (marcadorTemporal) map.removeLayer(marcadorTemporal);
-    marcadorTemporal = L.marker([e.latlng.lat, e.latlng.lng], {
-      icon: L.divIcon({
-        className: '',
-        html: '<div style="background:#2563eb;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);"></div>',
-        iconSize: [14, 14]
-      })
-    }).addTo(map);
-    actualizarCoordsUI();
-    document.querySelector('#tabs button[data-tab="nueva"]').click();
-  });
-
-  // ═════════════════════════════════════════
-  // GEOLOCALIZACIÓN
-  // ═════════════════════════════════════════
-  document.getElementById('btnUbicacion').onclick = () => {
-    if (!navigator.geolocation) return alert('Sin geolocalización');
-    const btn = document.getElementById('btnUbicacion');
-    const original = btn.textContent;
-    btn.textContent = 'Obteniendo ubicación...';
-    btn.disabled = true;
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        puntoSeleccionado = { lat: latitude, lng: longitude };
-
-        if (marcadorTemporal) map.removeLayer(marcadorTemporal);
-        marcadorTemporal = L.marker([latitude, longitude], {
-          icon: L.divIcon({
-            className: '',
-            html: '<div style="background:#2563eb;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);"></div>',
-            iconSize: [14, 14]
-          })
-        }).addTo(map);
-
-        map.setView([latitude, longitude], 17);
-
-        if (mapSelector) {
-          mapSelector.setView([latitude, longitude], 17);
-        }
-
-        actualizarCoordsUI();
-        btn.textContent = original;
-        btn.disabled = false;
-      },
-      (err) => {
-        alert('No se pudo obtener la ubicación: ' + err.message);
-        btn.textContent = original;
-        btn.disabled = false;
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  };
-
-  // ═════════════════════════════════════════
-  // FOTOS
-  // ═════════════════════════════════════════
-  const MAX_FOTOS = 3;
-
-  document.getElementById('btnHacerFoto').onclick = () => {
-    if (imagenesPendientes.length >= MAX_FOTOS) return;
-    document.getElementById('inputCamara').click();
-  };
-  document.getElementById('btnGaleria').onclick = () => {
-    if (imagenesPendientes.length >= MAX_FOTOS) return;
-    document.getElementById('inputGaleria').click();
-  };
-
-  document.getElementById('inputCamara').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (file) await añadirImagen(file);
-    e.target.value = '';
-  });
-  document.getElementById('inputGaleria').addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files);
-    const hueco = MAX_FOTOS - imagenesPendientes.length;
-    for (const file of files.slice(0, hueco)) await añadirImagen(file);
-    e.target.value = '';
-  });
-
-  async function añadirImagen(file) {
-    if (imagenesPendientes.length >= MAX_FOTOS) return;
-    const base64 = await leerComoBase64(file);
-    const comprimido = await comprimirImagen(base64, 800);
-    imagenesPendientes.push(comprimido);
-    renderPreview();
-  }
-
-  function leerComoBase64(file) {
-    return new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = () => res(r.result);
-      r.onerror = rej;
-      r.readAsDataURL(file);
-    });
-  }
-
-  function comprimirImagen(base64, maxW) {
-    return new Promise((res) => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxW / img.width);
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        res(canvas.toDataURL('image/jpeg', 0.7));
-      };
-      img.src = base64;
-    });
-  }
-
-  function renderPreview() {
-    const cont = document.getElementById('previewImgs');
-    cont.innerHTML = '';
-    imagenesPendientes.forEach((src, i) => {
-      const div = document.createElement('div');
-      div.className = 'thumb';
-      div.innerHTML = `<img src="${src}"><button>×</button>`;
-      div.querySelector('button').onclick = () => {
-        imagenesPendientes.splice(i, 1);
-        renderPreview();
-      };
-      cont.appendChild(div);
-    });
-    actualizarBotonesFoto();
-  }
-
-  function actualizarBotonesFoto() {
-    const n = imagenesPendientes.length;
-    document.getElementById('contadorFotos').textContent = `${n} / ${MAX_FOTOS} imágenes`;
-    const lleno = n >= MAX_FOTOS;
-    document.getElementById('btnHacerFoto').disabled = lleno;
-    document.getElementById('btnGaleria').disabled = lleno;
-    document.getElementById('btnHacerFoto').classList.toggle('primary', !lleno);
-  }
-
-  // ═════════════════════════════════════════
-  // GUARDAR
-  // ═════════════════════════════════════════
-  document.getElementById('btnAdd').onclick = async () => {
-    if (!puntoSeleccionado) return alert('Primero selecciona una ubicación');
-
-    const tipoNuevo = document.getElementById('tipo').value;
-
-    const duplicada = incidencias.find(inc =>
-      inc.estado === 'activa' &&
-      inc.tipo === tipoNuevo &&
-      distanciaMetros(puntoSeleccionado.lat, puntoSeleccionado.lng, inc.lat, inc.lng) < 50
-    );
-
-    if (duplicada) {
-      const distancia = Math.round(distanciaMetros(puntoSeleccionado.lat, puntoSeleccionado.lng, duplicada.lat, duplicada.lng));
-      const continuar = confirm(`⚠️ AVISO:\n\nYa existe una incidencia activa de tipo "${TIPOS[tipoNuevo].label}" a ${distancia} metros de esta ubicación.\n\n¿Deseas guardar esta de todas formas?`);
-      if (!continuar) return;
-    }
-
-    const inc = {
-      id: Date.now().toString(),
-      tipo: tipoNuevo,
-      desc: document.getElementById('desc').value.trim(),
-      gravedad: parseInt(document.getElementById('gravedad').value),
-      lat: puntoSeleccionado.lat,
-      lng: puntoSeleccionado.lng,
-      carretera: document.getElementById('carretera').value.trim(),
-      pk: document.getElementById('pk').value.trim(),
-      estado: 'activa',
-      fecha: new Date().toISOString(),
-      imagenes: imagenesPendientes.slice()
-    };
-
-    const btn = document.getElementById('btnAdd');
-    btn.disabled = true;
-    btn.textContent = 'Guardando...';
-
-    const ok = await guardarIncidenciaSupabase(inc);
-
-    if (ok) {
-      if (marcadorTemporal) { map.removeLayer(marcadorTemporal); marcadorTemporal = null; }
-      puntoSeleccionado = null;
-      imagenesPendientes = [];
-      document.getElementById('desc').value = '';
-      document.getElementById('carretera').value = '';
-      document.getElementById('pk').value = '';
-      document.getElementById('inputCamara').value = '';
-      document.getElementById('inputGaleria').value = '';
-      renderPreview();
-      actualizarCoordsUI();
-      await cargarIncidencias();
-      document.querySelector('#tabs button[data-tab="lista"]').click();
-    }
-
-    btn.disabled = false;
-    btn.textContent = 'Guardar incidencia';
-  };
-
-  // ═════════════════════════════════════════
-  // EXPORTACIÓN EXCEL
-  // ═════════════════════════════════════════
-  function renderExpTipos() {
-    const cont = document.getElementById('expTipos');
-    cont.innerHTML = '';
-    Object.entries(TIPOS).forEach(([key, cfg]) => {
-      const label = document.createElement('label');
-      label.innerHTML = `<input type="checkbox" value="${key}" checked> ${cfg.label}`;
-      cont.appendChild(label);
-    });
-    cont.querySelectorAll('input').forEach(inp => {
-      inp.addEventListener('change', actualizarInfoExport);
-    });
-  }
-  function initFechasExport() {
-    const hoy = new Date();
-    const hace30 = new Date();
-    hace30.setDate(hoy.getDate() - 30);
-    document.getElementById('expHasta').value = hoy.toISOString().slice(0, 10);
-    document.getElementById('expDesde').value = hace30.toISOString().slice(0, 10);
-  }
-  function incidenciasParaExportar() {
-    const desdeStr = document.getElementById('expDesde').value;
-    const hastaStr = document.getElementById('expHasta').value;
-    const estado = document.getElementById('expEstado').value;
-    const tipos = new Set([...document.querySelectorAll('#expTipos input:checked')].map(i => i.value));
-    const desde = desdeStr ? new Date(desdeStr + 'T00:00:00') : null;
-    const hasta = hastaStr ? new Date(hastaStr + 'T23:59:59') : null;
-    return incidencias.filter(inc => {
-      if (!tipos.has(inc.tipo)) return false;
-      if (estado !== 'todas' && inc.estado !== estado) return false;
-      const f = new Date(inc.fecha);
-      if (desde && f < desde) return false;
-      if (hasta && f > hasta) return false;
-      return true;
-    });
-  }
-  function actualizarInfoExport() {
-    const el = document.getElementById('exportInfo');
-    if (!el) return;
-    const n = incidenciasParaExportar().length;
-    el.textContent = n === 0 ? 'Ninguna incidencia cumple los filtros' : `${n} incidencia${n === 1 ? '' : 's'} se exportarán`;
-  }
-  function fmtFecha(iso) {
-    if (!iso) return '';
-    return new Date(iso).toLocaleString('es-ES', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit'
-    });
-  }
-  function duracion(a, b) {
-    if (!b) return '';
-    const ms = new Date(b) - new Date(a);
-    const h = Math.floor(ms / 3600000);
-    const m = Math.floor((ms % 3600000) / 60000);
-    const d = Math.floor(h / 24);
-    if (d > 0) return `${d}d ${h % 24}h ${m}m`;
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
-  }
-
-  document.getElementById('btnExportar').onclick = () => {
-    const datos = incidenciasParaExportar();
-    if (datos.length === 0) return alert('No hay incidencias que cumplan los filtros.');
-
-    const filas = datos.map(inc => ({
-      'ID': inc.id,
-      'Carretera': inc.carretera || '',
-      'PK': inc.pk || '',
-      'Tipo': TIPOS[inc.tipo]?.label || inc.tipo,
-      'Descripción': inc.desc || '',
-      'Gravedad (1-5)': inc.gravedad,
-      'Estado': inc.estado === 'activa' ? 'Activa' : 'Cerrada',
-      'Fecha/hora inicio': fmtFecha(inc.fecha),
-      'Fecha/hora cierre': inc.cerradaEn ? fmtFecha(inc.cerradaEn) : '',
-      'Duración': duracion(inc.fecha, inc.cerradaEn),
-      'Latitud': inc.lat,
-      'Longitud': inc.lng,
-      'Nº imágenes': (inc.imagenes || []).length,
-      'Enlace mapa': `https://www.openstreetmap.org/?mlat=${inc.lat}&mlon=${inc.lng}#map=18/${inc.lat}/${inc.lng}`
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(filas);
-    ws['!cols'] = [
-      { wch: 15 }, { wch: 12 }, { wch: 10 }, { wch: 22 }, { wch: 40 },
-      { wch: 14 }, { wch: 10 }, { wch: 18 }, { wch: 18 }, { wch: 12 },
-      { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 45 }
-    ];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Incidencias');
-    const hoy = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `incidencias_${hoy}.xlsx`);
-  };
-
-  ['expDesde', 'expHasta', 'expEstado'].forEach(id => {
-    document.getElementById(id).addEventListener('change', actualizarInfoExport);
-  });
-
-  // ═════════════════════════════════════════
-  // DESCARGAR FOTOS EN ZIP
-  // ═════════════════════════════════════════
-  document.getElementById('btnExportarFotos').onclick = async () => {
-    const datos = incidenciasParaExportar().filter(inc => inc.imagenes && inc.imagenes.length > 0);
-
-    if (datos.length === 0) {
-      return alert('No hay fotos en las incidencias que cumplen los filtros.');
-    }
-
-    const btn = document.getElementById('btnExportarFotos');
-    const originalHTML = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = 'Creando ZIP...';
-
-    try {
-      const zip = new JSZip();
-      let numFotos = 0;
-
-      for (const inc of datos) {
-        const fechaObj = new Date(inc.fecha);
-        const yyyy = fechaObj.getFullYear();
-        const mm = String(fechaObj.getMonth() + 1).padStart(2, '0');
-        const dd = String(fechaObj.getDate()).padStart(2, '0');
-        const fechaStr = `${yyyy}${mm}${dd}`;
-
-        const carretera = inc.carretera ? inc.carretera.trim() : 'SIN-CARRETERA';
-        const pk = inc.pk ? inc.pk.trim() : 'SIN-PK';
-
-        for (let i = 0; i < inc.imagenes.length; i++) {
-          const base64 = inc.imagenes[i];
-          const base64Data = base64.split(',')[1];
-          const sufijo = inc.imagenes.length > 1 ? `-${i+1}` : '';
-          const nombreArchivo = `${fechaStr} ${carretera} ${pk}${sufijo}.jpg`;
-
-          zip.file(nombreArchivo, base64Data, { base64: true });
-          numFotos++;
-        }
-      }
-
-      const content = await zip.generateAsync({ type: 'blob' });
-      const url = window.URL.createObjectURL(content);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `fotos_incidencias_${new Date().toISOString().slice(0,10)}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-
-    } catch (err) {
-      console.error(err);
-      alert('Hubo un error al crear el ZIP');
-    }
-
-    btn.disabled = false;
-    btn.textContent = originalHTML;
-  };
+  $('startBtn').onclick = iniciarRuta;
+  $('stopBtn').onclick = pararRuta;
+  $('umbral').onchange = renderAnalisis;
+  $('diasMedia').onchange = renderAnalisis;
 
   // ═════════════════════════════════════════
   // RESIZE
   // ═════════════════════════════════════════
-  window.addEventListener('orientationchange', () => {
-    setTimeout(() => {
-      map.invalidateSize();
-      if (mapSelector) mapSelector.invalidateSize();
-    }, 300);
-  });
-  window.addEventListener('resize', () => {
-    map.invalidateSize();
-    if (mapSelector && document.getElementById('modalMapa').classList.contains('abierto')) {
-      mapSelector.invalidateSize();
-    }
-  });
+  window.addEventListener('resize', () => map.invalidateSize());
+  window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize(), 300));
 
   // ═════════════════════════════════════════
   // INICIO
   // ═════════════════════════════════════════
-  renderChipsTipo();
-  renderExpTipos();
-  initFechasExport();
-  actualizarCoordsUI();
-  actualizarBotonesFoto();
-
-  cargarIncidencias();
-  suscribirseCambios();
-
-  setTimeout(() => {
-    cargarCSV();
-  }, 500);
-
+  initSensors();
+  cargarTodo();
+  setTimeout(cargarCSV, 500);
+})();
 </script>
 </body>
 </html>
