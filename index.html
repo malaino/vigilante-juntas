@@ -89,6 +89,11 @@
   .level-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     font-size:11px;font-weight:600;color:var(--text);}
 
+  #zonaEstado{padding:8px 11px;border-radius:4px;margin-bottom:10px;font-size:12px;
+    font-weight:500;text-align:center;border:1px solid var(--border);}
+  #zonaEstado.dentro{color:#86efac;border-color:var(--success);background:rgba(34,197,94,.1);}
+  #zonaEstado.fuera{color:var(--muted-2);border-color:var(--border);background:var(--bg);}
+
   #alertBox{display:none;background:rgba(239,68,68,.12);color:#fca5a5;
     padding:10px;border-radius:4px;margin-bottom:12px;font-size:13px;
     text-align:center;font-weight:500;border:1px solid var(--danger);}
@@ -183,8 +188,8 @@
             <input type="number" id="umbralAcel" value="15" min="5" max="50"></div>
         </div>
         <div class="row-2">
-          <div><label for="radio">Radio asociación (m)</label>
-            <input type="number" id="radio" value="20" min="5" max="100"></div>
+          <div><label for="radio">Radio de captura (m)</label>
+            <input type="number" id="radio" value="30" min="5" max="200"></div>
           <div><label for="umbral">Umbral alerta (%)</label>
             <input type="number" id="umbral" value="25" min="5" max="200"></div>
         </div>
@@ -209,6 +214,7 @@
 
       <div class="section">
         <div class="section-title">Estado</div>
+        <div id="zonaEstado" class="fuera">Fuera de zona · no se registra</div>
         <div class="level-bar"><div class="level-fill" id="levelFill"></div><div class="level-text" id="levelText">—</div></div>
         <div class="coord-box" id="status">Inicializando...</div>
         <div class="coord-box" id="gpsInfo">GPS: —</div>
@@ -311,7 +317,7 @@
   const setStatus = m => $('status').textContent = m;
 
   $('modeLabel').textContent = isMobile ? 'Móvil' : 'PC';
-  $('roleBanner').textContent = isMobile ? '📱 Modo campo · toma de datos' : '🖥 Modo gestión · crea juntas y revisa';
+  $('roleBanner').textContent = isMobile ? '📱 Modo campo · solo registra cerca de juntas' : '🖥 Modo gestión · crea juntas y revisa';
   $('roleBanner').className = 'role-banner ' + (isMobile ? 'role-movil' : 'role-pc');
 
   // ══════ CSV DE PKs ══════
@@ -350,7 +356,6 @@
   // ══════ MAPA Y CAPAS ══════
   const CENTRO_LA_RIOJA = [42.4627, -2.4449];
 
-  // PNOA — Ortofoto Máxima Actualidad (IGN)
   const pnoa = L.tileLayer.wms('https://www.ign.es/wms-inspire/pnoa-ma', {
     layers: 'OI.OrthoimageCoverage',
     format: 'image/jpeg',
@@ -359,7 +364,6 @@
     maxZoom: 20
   });
 
-  // OpenStreetMap estándar
   const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap',
     maxZoom: 19
@@ -368,7 +372,7 @@
   const map = L.map('map', {
     center: CENTRO_LA_RIOJA,
     zoom: 10,
-    layers: [pnoa],   // PNOA por defecto
+    layers: [pnoa],
     tap: true,
     touchZoom: true
   });
@@ -380,6 +384,7 @@
 
   let pathPolyline = L.polyline([],{color:'#38bdf8',weight:3,opacity:.6}).addTo(map);
   let juntaLayer = L.layerGroup().addTo(map);
+  let zonaLayer = L.layerGroup().addTo(map);   // círculos de zona alrededor de cada junta
   let tempMarker = null;
 
   // ══════ ESTADO ══════
@@ -526,6 +531,7 @@
       ultimoGolpeTs = Date.now();
       registrarEvento(new Date().toISOString(), nivel, ultimaPos, 'audio');
     }
+    actualizarEstadoZona();
     sampleTimer = setTimeout(loop, 1000);
   }
 
@@ -568,7 +574,7 @@
       const base64 = await leerComoBase64(file);
       const comprimido = await comprimirImagen(base64, 800);
       fotoPendiente = comprimido;
-      $('fotoStatus').textContent = '✅ Foto lista (se adjuntará al próximo evento)';
+      $('fotoStatus').textContent = '✅ Foto lista (se adjuntará al próximo evento dentro de zona)';
       if (ultimaPos) {
         registrarEvento(new Date().toISOString(), 1, ultimaPos, 'foto');
       }
@@ -592,7 +598,8 @@
 
   $('btnFotoManual').onclick = () => { ultimaFotoTs = 0; dispararFoto('manual'); };
 
-  // ══════ ASOCIACIÓN A JUNTA DE CONTROL ══════
+  // ══════ ASOCIACIÓN A JUNTA DE CONTROL (con filtro de zona) ══════
+  // Devuelve la junta de control más cercana dentro del radio, o null si no hay ninguna.
   function buscarJuntaControl(lat, lng, radio, sentido) {
     let mejor = null, mejorDist = Infinity;
     for (const id in juntas) {
@@ -609,19 +616,57 @@
     return mejor;
   }
 
+  // Actualiza el indicador visual de "dentro / fuera de zona"
+  function actualizarEstadoZona() {
+    const el = $('zonaEstado');
+    if (!running || !ultimaPos) {
+      el.textContent = 'Sin GPS · no se registra';
+      el.className = 'fuera';
+      return;
+    }
+    const radio = parseInt($('radio').value) || 30;
+    // Comprobamos solo por distancia (sin sentido) para el indicador visual
+    let cerca = null, dist = Infinity;
+    for (const id in juntas) {
+      const j = juntas[id];
+      if (!j.es_control) continue;
+      const d = distanciaMetros(ultimaPos.lat, ultimaPos.lng, j.lat, j.lng);
+      if (d < dist) { dist = d; cerca = j; }
+    }
+    if (cerca && dist <= radio) {
+      const nombre = cerca.nombre_personalizado || cerca.junta_id;
+      el.textContent = `✔ Dentro de zona · ${nombre} (${Math.round(dist)} m)`;
+      el.className = 'dentro';
+    } else if (cerca) {
+      el.textContent = `Fuera de zona · junta más cercana a ${Math.round(dist)} m`;
+      el.className = 'fuera';
+    } else {
+      el.textContent = 'Sin juntas definidas';
+      el.className = 'fuera';
+    }
+  }
+
   async function registrarEvento(ts, nivel, pos, tipo) {
-    const radio = parseInt($('radio').value) || 20;
+    const radio = parseInt($('radio').value) || 30;
     const pkCercano = buscarPKCercano(pos.lat, pos.lng);
     const pkNum = pkCercano ? pkCercano.pk : null;
     const carretera = pkCercano ? pkCercano.carretera : null;
     const sentido = detectarSentido(pkNum, carretera);
+
+    // ── FILTRO CLAVE: solo registrar si hay junta de control dentro del radio ──
     const junta = buscarJuntaControl(pos.lat, pos.lng, radio, sentido);
+    if (!junta) {
+      // Estamos fuera de zona: no se guarda nada
+      $('fotoStatus').textContent = '⏭ Evento descartado (fuera de zona)';
+      return;
+    }
+
     registrarPKHistorial(pkNum, carretera);
 
     const foto = fotoPendiente;
     const ev = {
       ts,
-      junta_id: junta ? junta.junta_id : '__SIN_ASIGNAR__',
+      junta_id: junta.junta_id,
       nivel,
       lat: pos.lat, lon: pos.lng, acc: pos.acc,
       alerta: false, tipo, sentido,
@@ -664,6 +709,7 @@
     $('startBtn').style.display = 'flex';
     $('stopBtn').style.display = 'none';
     setStatus('⏹ Ruta detenida');
+    actualizarEstadoZona();
     cargarTodo();
   }
 
@@ -741,6 +787,8 @@
 
   function renderMapa() {
     juntaLayer.clearLayers();
+    zonaLayer.clearLayers();
+    const radio = parseInt($('radio').value) || 30;
     for (const id in juntas) {
       const j = juntas[id];
       if (!j.es_control) continue;
@@ -748,6 +796,12 @@
       const sent = j.sentido || 'IND';
       const color = sent === 'DESC' ? '#f59e0b' : sent === 'ASC' ? '#38bdf8' : '#a78bfa';
       const subtitulo = (j.carretera||'') + (j.pk?' · PK '+j.pk:'') + ' · ' + sent;
+      // Círculo de zona de captura
+      L.circle([j.lat,j.lng], {
+        radius: radio,
+        color, weight:1, opacity:.4, fillColor:color, fillOpacity:.08
+      }).addTo(zonaLayer);
+      // Punto de la junta
       L.circleMarker([j.lat,j.lng],{radius:9,color,fillColor:color,fillOpacity:.85,weight:2})
         .bindPopup(`<b>${nombre}</b><br>${subtitulo}<br><span style="color:#8a97ad;font-size:11px">${id}</span>`)
         .addTo(juntaLayer);
@@ -955,6 +1009,7 @@
   $('stopBtn').onclick = pararRuta;
   $('umbral').onchange = renderAnalisis;
   $('diasMedia').onchange = renderAnalisis;
+  $('radio').onchange = renderMapa;   // redibuja los círculos de zona al cambiar el radio
 
   window.addEventListener('resize',()=>map.invalidateSize());
   window.addEventListener('orientationchange',()=>setTimeout(()=>map.invalidateSize(),300));
