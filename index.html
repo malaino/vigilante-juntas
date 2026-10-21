@@ -13,19 +13,11 @@
 
 <style>
   :root{
-    --bg:#0b1220;
-    --surface:#111a2b;
-    --surface-2:#16213a;
-    --border:#1f2a44;
-    --border-2:#2a3a5c;
-    --text:#e6edf7;
-    --muted:#8a97ad;
-    --muted-2:#5f6c82;
-    --accent:#38bdf8;
-    --accent-2:#0ea5e9;
-    --success:#22c55e;
-    --warn:#f59e0b;
-    --danger:#ef4444;
+    --bg:#0b1220; --surface:#111a2b; --surface-2:#16213a;
+    --border:#1f2a44; --border-2:#2a3a5c;
+    --text:#e6edf7; --muted:#8a97ad; --muted-2:#5f6c82;
+    --accent:#38bdf8; --accent-2:#0ea5e9;
+    --success:#22c55e; --warn:#f59e0b; --danger:#ef4444;
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
@@ -35,7 +27,7 @@
   #map{flex:1;position:relative;z-index:1;background:#0e1727;}
   .leaflet-container{background:#0e1727 !important;font-family:inherit !important;}
 
-  #panel{width:400px;background:var(--bg);border-left:1px solid var(--border);
+  #panel{width:420px;background:var(--bg);border-left:1px solid var(--border);
     display:flex;flex-direction:column;overflow:hidden;z-index:2;}
   #panel header{padding:16px 20px;border-bottom:1px solid var(--border);
     flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:12px;}
@@ -80,8 +72,9 @@
   .btn-go:hover:not(:disabled){background:#4ade80;}
   .btn-stop{background:var(--danger);color:#fff;border-color:var(--danger);font-weight:600;}
   .btn-stop:hover:not(:disabled){background:#f87171;}
+  .btn-sm{padding:5px 10px;font-size:11px;margin-top:0;width:auto;}
 
-  .section{padding:14px;border:1px solid var(--border);border-radius:6px;margin-bottom:4px;background:var(--surface);}
+  .section{padding:14px;border:1px solid var(--border);border-radius:6px;margin-bottom:12px;background:var(--surface);}
   .section-title{font-size:12px;font-weight:600;color:var(--accent);margin-bottom:10px;}
   .row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 
@@ -113,6 +106,7 @@
     align-items:center;gap:8px;color:var(--text);}
   .item .desc{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.4;}
   .item input,.item select{padding:5px 8px;font-size:12px;}
+  .item.event{opacity:.9;}
 
   .badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;
     font-weight:500;white-space:nowrap;border:1px solid var(--border-2);color:var(--muted);background:var(--bg);}
@@ -121,15 +115,15 @@
   .badge.nueva{color:var(--muted);border-color:var(--border-2);}
   .badge.asc{color:#7dd3fc;border-color:var(--accent);background:rgba(56,189,248,.1);}
   .badge.desc{color:#fbbf24;border-color:var(--warn);background:rgba(245,158,11,.1);}
+  .badge.control{color:#c4b5fd;border-color:#8b5cf6;background:rgba(139,92,246,.1);}
+  .badge.auto{color:var(--muted-2);border-color:var(--border-2);}
 
   .empty-state{text-align:center;padding:32px 16px;color:var(--muted-2);font-size:13px;}
   .list-header{display:flex;align-items:center;justify-content:space-between;
     font-size:12px;color:var(--muted);font-weight:500;margin-bottom:10px;}
 
-  /* Leaflet: controles en tema oscuro */
   .leaflet-popup-content-wrapper{background:var(--surface);color:var(--text);
-    border-radius:6px;border:1px solid var(--border-2);
-    box-shadow:0 8px 24px rgba(0,0,0,.5);}
+    border-radius:6px;border:1px solid var(--border-2);box-shadow:0 8px 24px rgba(0,0,0,.5);}
   .leaflet-popup-tip{background:var(--surface);}
   .leaflet-popup-content{margin:12px;font-family:inherit;font-size:13px;}
   .leaflet-popup-close-button{color:var(--muted) !important;}
@@ -142,6 +136,11 @@
   .leaflet-control-zoom a:hover{background:var(--surface-2) !important;color:var(--accent) !important;}
   .leaflet-control-attribution{background:rgba(11,18,32,.8) !important;color:var(--muted) !important;}
   .leaflet-control-attribution a{color:var(--accent) !important;}
+
+  .role-banner{padding:8px 20px;font-size:11px;text-align:center;font-weight:600;
+    letter-spacing:.05em;text-transform:uppercase;flex-shrink:0;}
+  .role-pc{background:rgba(139,92,246,.15);color:#c4b5fd;border-bottom:1px solid #6d28d9;}
+  .role-movil{background:rgba(34,197,94,.15);color:#86efac;border-bottom:1px solid #15803d;}
 
   @media (max-width:900px){
     #app{flex-direction:column;}
@@ -161,19 +160,22 @@
   <aside id="panel">
     <header>
       <h1>Vigilante de juntas</h1>
-      <span class="version">v1.2</span>
+      <span class="version" id="modeLabel">—</span>
     </header>
+
+    <div class="role-banner" id="roleBanner">—</div>
 
     <div id="tabs">
       <button data-tab="ruta" class="active">Ruta</button>
       <button data-tab="juntas">Juntas</button>
+      <button data-tab="registros">Registros</button>
       <button data-tab="analisis">Análisis</button>
     </div>
 
-    <!-- ══════ RUTA ══════ -->
+    <!-- ══════ RUTA (SOLO MÓVIL) ══════ -->
     <div class="tab-content active" id="tab-ruta">
       <div class="section">
-        <div class="section-title">Parámetros</div>
+        <div class="section-title">Parámetros de captura</div>
         <div class="row-2">
           <div><label for="nivelGolpe">Nivel golpe audio</label>
             <input type="number" id="nivelGolpe" value="45" min="10" max="100"></div>
@@ -181,7 +183,7 @@
             <input type="number" id="umbralAcel" value="15" min="5" max="50"></div>
         </div>
         <div class="row-2">
-          <div><label for="radio">Radio junta (m)</label>
+          <div><label for="radio">Radio asociación (m)</label>
             <input type="number" id="radio" value="20" min="5" max="100"></div>
           <div><label for="umbral">Umbral alerta (%)</label>
             <input type="number" id="umbral" value="25" min="5" max="200"></div>
@@ -216,15 +218,57 @@
       <button id="stopBtn" class="btn btn-stop" style="display:none;">Detener ruta</button>
     </div>
 
-    <!-- ══════ JUNTAS ══════ -->
+    <!-- ══════ JUNTAS (GESTIÓN) ══════ -->
     <div class="tab-content" id="tab-juntas">
       <div class="coord-box" id="estadoCSV">Cargando CSV de PKs...</div>
+      <div class="coord-box" id="nuevaJuntaInfo">Haz clic en el mapa para crear una junta de control</div>
+
+      <div class="section" id="nuevaJuntaForm" style="display:none;">
+        <div class="section-title">Nueva junta de control</div>
+        <div class="row-2">
+          <div><label style="margin-top:0;">Carretera</label>
+            <input type="text" id="nuevaCarretera" placeholder="LR-111"></div>
+          <div><label style="margin-top:0;">PK</label>
+            <input type="text" id="nuevaPK" placeholder="12.400"></div>
+        </div>
+        <div class="row-2" style="margin-top:8px;">
+          <div><label style="margin-top:0;">Sentido</label>
+            <select id="nuevaSentido">
+              <option value="ASC">Ascendente</option>
+              <option value="DESC">Descendente</option>
+              <option value="IND" selected>Indeterminado</option>
+            </select></div>
+          <div><label style="margin-top:0;">Nombre</label>
+            <input type="text" id="nuevaNombre" placeholder="Junta puente"></div>
+        </div>
+        <div class="coord-box" id="nuevaCoords" style="margin-top:10px;">—</div>
+        <div class="row-2">
+          <button class="btn btn-sm" id="btnCancelarNueva" style="width:100%;">Cancelar</button>
+          <button class="btn btn-primary btn-sm" id="btnCrearJunta" style="width:100%;">Crear junta</button>
+        </div>
+      </div>
+
       <div class="list-header">
-        <span>Juntas detectadas</span>
+        <span>Juntas de control</span>
         <span id="contadorJuntas">0</span>
       </div>
       <div id="listaJuntas">
-        <div class="empty-state">Aún no hay juntas detectadas</div>
+        <div class="empty-state">Aún no hay juntas definidas</div>
+      </div>
+    </div>
+
+    <!-- ══════ REGISTROS (BORRAR) ══════ -->
+    <div class="tab-content" id="tab-registros">
+      <div class="list-header">
+        <span>Registros capturados</span>
+        <span id="contadorEventos">0</span>
+      </div>
+      <div class="row-2" style="margin-bottom:10px;">
+        <button class="btn btn-sm" id="btnRefrescarRegistros" style="width:100%;">Actualizar</button>
+        <button class="btn btn-danger btn-sm" id="btnBorrarTodosEventos" style="width:100%;">Borrar todos</button>
+      </div>
+      <div id="listaRegistros">
+        <div class="empty-state">Sin registros</div>
       </div>
     </div>
 
@@ -233,14 +277,13 @@
       <div id="alertBox"></div>
       <div class="list-header">
         <span>Comparación por junta</span>
-        <span id="contadorEventos">0</span>
+        <span id="contadorAnalisis">0</span>
       </div>
       <div id="tablaAnalisis"><div class="empty-state">Sin datos</div></div>
 
       <label style="margin-top:20px;">Exportar</label>
       <button class="btn btn-primary" id="downloadBtn" disabled>Descargar CSV de eventos</button>
       <button class="btn" id="downloadJuntasBtn" disabled>Descargar CSV de juntas</button>
-      <button class="btn btn-danger" id="clearBtn">Borrar todos los datos</button>
     </div>
   </aside>
 </div>
@@ -266,6 +309,10 @@
   const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   const hoy = () => new Date().toISOString().slice(0,10);
   const setStatus = m => $('status').textContent = m;
+
+  $('modeLabel').textContent = isMobile ? 'Móvil' : 'PC';
+  $('roleBanner').textContent = isMobile ? '📱 Modo campo · toma de datos' : '🖥 Modo gestión · crea juntas y revisa';
+  $('roleBanner').className = 'role-banner ' + (isMobile ? 'role-movil' : 'role-pc');
 
   // ══════ CSV DE PKs ══════
   let pksCargados = [];
@@ -300,27 +347,55 @@
     return mejor && mejorDist<=maxMetros ? {...mejor,distancia:mejorDist} : null;
   }
 
-  // ══════ MAPA ══════
+  // ══════ MAPA Y CAPAS ══════
   const CENTRO_LA_RIOJA = [42.4627, -2.4449];
-  const pnoa = L.tileLayer.wms('https://www.ign.es/wms-inspire/pnoa-ma',{
-    layers:'OI.OrthoimageCoverage',format:'image/jpeg',transparent:false,
-    attribution:'PNOA © IGN España',maxZoom:20});
-  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    attribution:'© OpenStreetMap',maxZoom:19});
 
-  // Tema oscuro para el mapa
-  const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
-    attribution:'© CARTO · © OpenStreetMap',maxZoom:19});
+  // Google Híbrido (sin API Key — no oficial, puede dejar de funcionar)
+  const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    attribution: '© Google'
+  });
 
-  const map = L.map('map',{center:CENTRO_LA_RIOJA,zoom:10,layers:[cartoDark],tap:true,touchZoom:true});
+  // PNOA — Ortofoto Máxima Actualidad (IGN)
+  const pnoa = L.tileLayer.wms('https://www.ign.es/wms-inspire/pnoa-ma', {
+    layers: 'OI.OrthoimageCoverage',
+    format: 'image/jpeg',
+    transparent: false,
+    attribution: 'PNOA © IGN España',
+    maxZoom: 20
+  });
+
+  // Mapa oscuro CARTO
+  const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© CARTO · © OpenStreetMap',
+    maxZoom: 19
+  });
+
+  // OpenStreetMap
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    maxZoom: 19
+  });
+
+  const map = L.map('map', {
+    center: CENTRO_LA_RIOJA,
+    zoom: 10,
+    layers: [googleHybrid],   // Google Híbrido por defecto
+    tap: true,
+    touchZoom: true
+  });
+
   L.control.layers({
+    "Google Híbrido": googleHybrid,
+    "Ortofoto PNOA (Máxima Actualidad)": pnoa,
     "Mapa oscuro": cartoDark,
-    "Ortofoto PNOA": pnoa,
-    "Mapa de calles": osm
+    "OpenStreetMap": osm
   }).addTo(map);
 
   let pathPolyline = L.polyline([],{color:'#38bdf8',weight:3,opacity:.6}).addTo(map);
   let juntaLayer = L.layerGroup().addTo(map);
+  let tempMarker = null;
 
   // ══════ ESTADO ══════
   let eventos = [];
@@ -328,13 +403,12 @@
   let audioContext, analyser, micStream;
   let watchId = null, running = false, ultimaPos = null, ultimoGolpeTs = 0, sampleTimer = null;
 
-  // Foto
   let fotoPendiente = null;
   let ultimaFotoTs = 0;
   let golpeFotoArmed = false;
 
-  // Sentido por PK
   let historialPK = [];
+  let nuevaJuntaPos = null;
 
   // ══════ SUPABASE ══════
   async function cargarTodo() {
@@ -349,9 +423,9 @@
     juntas = {};
     (juRes.data || []).forEach(j => { juntas[j.junta_id] = j; });
     renderTodo();
-    setStatus(`✅ ${eventos.length} eventos · ${Object.keys(juntas).length} juntas`);
+    setStatus(`✅ ${eventos.length} registros · ${Object.values(juntas).filter(j=>j.es_control).length} juntas`);
     $('downloadBtn').disabled = eventos.length === 0;
-    $('downloadJuntasBtn').disabled = Object.keys(juntas).length === 0;
+    $('downloadJuntasBtn').disabled = Object.values(juntas).filter(j=>j.es_control).length === 0;
   }
 
   async function guardarEvento(ev) {
@@ -367,26 +441,44 @@
       pk: j.pk || null,
       sentido: j.sentido || 'IND',
       lat: j.lat, lng: j.lng,
-      nombre_personalizado: j.nombre_personalizado || null
+      nombre_personalizado: j.nombre_personalizado || null,
+      es_control: j.es_control || false
     }], { onConflict: 'junta_id' });
     if (error) { console.error(error); setStatus('Error junta: ' + error.message); return false; }
     return true;
   }
 
-  async function borrarTodo() {
-    if (!confirm('¿Borrar TODOS los eventos y juntas de la nube?')) return;
-    await supabaseClient.from('eventos').delete().neq('id', 0);
-    await supabaseClient.from('juntas').delete().neq('junta_id', '');
-    eventos = []; juntas = {};
+  async function borrarEvento(id) {
+    if (!confirm('¿Borrar este registro?')) return;
+    const { error } = await supabaseClient.from('eventos').delete().eq('id', id);
+    if (error) { alert('Error: ' + error.message); return; }
+    eventos = eventos.filter(e => e.id !== id);
     renderTodo();
-    $('downloadBtn').disabled = true;
-    $('downloadJuntasBtn').disabled = true;
-    setStatus('✅ Nube vaciada');
   }
 
-  // ══════ SENSORES ══════
+  async function borrarJunta(juntaId) {
+    const evsJunta = eventos.filter(e => e.junta_id === juntaId);
+    const msg = evsJunta.length
+      ? `¿Borrar la junta ${juntaId} y sus ${evsJunta.length} registros asociados?`
+      : `¿Borrar la junta ${juntaId}?`;
+    if (!confirm(msg)) return;
+    await supabaseClient.from('eventos').delete().eq('junta_id', juntaId);
+    await supabaseClient.from('juntas').delete().eq('junta_id', juntaId);
+    delete juntas[juntaId];
+    eventos = eventos.filter(e => e.junta_id !== juntaId);
+    renderTodo();
+  }
+
+  async function borrarTodosEventos() {
+    if (!confirm('¿Borrar TODOS los registros de eventos? (las juntas se mantienen)')) return;
+    await supabaseClient.from('eventos').delete().neq('id', 0);
+    eventos = [];
+    renderTodo();
+  }
+
+  // ══════ SENSORES (solo móvil) ══════
   async function initSensors() {
-    if (!isMobile) { setStatus('Modo PC · solo visualización'); return; }
+    if (!isMobile) { setStatus('Modo PC · sin sensores'); return; }
     try {
       setStatus('Solicitando micrófono...');
       micStream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
@@ -452,7 +544,7 @@
     sampleTimer = setTimeout(loop, 1000);
   }
 
-  // ══════ DETECCIÓN DE SENTIDO ══════
+  // ══════ SENTIDO ══════
   function detectarSentido(pkActual, carreteraActual) {
     if (pkActual == null) return 'IND';
     const ahora = Date.now();
@@ -515,56 +607,37 @@
 
   $('btnFotoManual').onclick = () => { ultimaFotoTs = 0; dispararFoto('manual'); };
 
-  // ══════ JUNTAS ══════
-  function buscarJuntaCercana(lat, lng, radio, sentido, pk, carretera) {
-    if (pk != null && carretera) {
-      const pkRed = pk.toFixed(3);
-      for (const id in juntas) {
-        const j = juntas[id];
-        if (j.carretera === carretera && j.pk === pkRed && (j.sentido || 'IND') === sentido) {
-          return j;
-        }
-      }
-    }
+  // ══════ ASOCIACIÓN A JUNTA DE CONTROL ══════
+  function buscarJuntaControl(lat, lng, radio, sentido) {
+    let mejor = null, mejorDist = Infinity;
     for (const id in juntas) {
       const j = juntas[id];
-      if (distanciaMetros(lat, lng, j.lat, j.lng) <= radio) {
-        const sJ = j.sentido || 'IND';
-        if (sJ === sentido || sJ === 'IND' || sentido === 'IND') return j;
+      if (!j.es_control) continue;
+      const d = distanciaMetros(lat, lng, j.lat, j.lng);
+      if (d > radio || d >= mejorDist) continue;
+      const sJ = j.sentido || 'IND';
+      if (sJ === sentido || sJ === 'IND' || sentido === 'IND') {
+        mejor = j;
+        mejorDist = d;
       }
     }
-    return null;
+    return mejor;
   }
 
   async function registrarEvento(ts, nivel, pos, tipo) {
     const radio = parseInt($('radio').value) || 20;
-
     const pkCercano = buscarPKCercano(pos.lat, pos.lng);
     const pkNum = pkCercano ? pkCercano.pk : null;
     const carretera = pkCercano ? pkCercano.carretera : null;
     const sentido = detectarSentido(pkNum, carretera);
-
-    let junta = buscarJuntaCercana(pos.lat, pos.lng, radio, sentido, pkNum, carretera);
-
-    if (!junta) {
-      const juntaId = 'J-' + Date.now().toString(36).slice(-6);
-      junta = {
-        junta_id: juntaId,
-        carretera: carretera,
-        pk: pkNum != null ? pkNum.toFixed(3) : null,
-        sentido: sentido,
-        lat: pos.lat, lng: pos.lng,
-        nombre_personalizado: null
-      };
-      juntas[juntaId] = junta;
-      await guardarJunta(junta);
-    }
-
+    const junta = buscarJuntaControl(pos.lat, pos.lng, radio, sentido);
     registrarPKHistorial(pkNum, carretera);
 
     const foto = fotoPendiente;
     const ev = {
-      ts, junta_id: junta.junta_id, nivel,
+      ts,
+      junta_id: junta ? junta.junta_id : '__SIN_ASIGNAR__',
+      nivel,
       lat: pos.lat, lon: pos.lng, acc: pos.acc,
       alerta: false, tipo, sentido,
       foto: foto || null
@@ -579,7 +652,7 @@
     }
   }
 
-  // ══════ INICIAR / PARAR ══════
+  // ══════ INICIAR / PARAR (móvil) ══════
   async function iniciarRuta() {
     if (running) return;
     running = true;
@@ -609,11 +682,70 @@
     cargarTodo();
   }
 
+  // ══════ CLIC EN MAPA (solo PC) ══════
+  map.on('click', (e) => {
+    if (isMobile) return;
+    nuevaJuntaPos = { lat: e.latlng.lat, lng: e.latlng.lng };
+    if (tempMarker) map.removeLayer(tempMarker);
+    tempMarker = L.marker([e.latlng.lat, e.latlng.lng], {
+      icon: L.divIcon({
+        className:'',
+        html:`<div style="background:#8b5cf6;width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 3px rgba(139,92,246,.4);"></div>`,
+        iconSize:[16,16]
+      })
+    }).addTo(map);
+
+    const pk = buscarPKCercano(e.latlng.lat, e.latlng.lng);
+    $('nuevaCarretera').value = pk ? pk.carretera : '';
+    $('nuevaPK').value = pk ? pk.pk.toFixed(3) : '';
+    $('nuevaCoords').textContent = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}` + (pk ? ` · PK a ${Math.round(pk.distancia)}m` : '');
+
+    $('nuevaJuntaForm').style.display = 'block';
+    $('nuevaJuntaInfo').textContent = 'Rellena los datos y crea la junta';
+    document.querySelector('#tabs button[data-tab="juntas"]').click();
+  });
+
+  $('btnCancelarNueva').onclick = () => {
+    nuevaJuntaPos = null;
+    if (tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
+    $('nuevaJuntaForm').style.display = 'none';
+    $('nuevaJuntaInfo').textContent = 'Haz clic en el mapa para crear una junta de control';
+  };
+
+  $('btnCrearJunta').onclick = async () => {
+    if (!nuevaJuntaPos) return;
+    const juntaId = 'J-' + Date.now().toString(36).slice(-6);
+    const j = {
+      junta_id: juntaId,
+      carretera: $('nuevaCarretera').value.trim() || null,
+      pk: $('nuevaPK').value.trim() || null,
+      sentido: $('nuevaSentido').value || 'IND',
+      lat: nuevaJuntaPos.lat, lng: nuevaJuntaPos.lng,
+      nombre_personalizado: $('nuevaNombre').value.trim() || null,
+      es_control: true
+    };
+    const ok = await guardarJunta(j);
+    if (ok) {
+      juntas[juntaId] = j;
+      setStatus('✅ Junta creada');
+      nuevaJuntaPos = null;
+      if (tempMarker) { map.removeLayer(tempMarker); tempMarker = null; }
+      $('nuevaJuntaForm').style.display = 'none';
+      $('nuevaJuntaInfo').textContent = 'Haz clic en el mapa para crear una junta de control';
+      renderTodo();
+    }
+  };
+
   // ══════ RENDER ══════
   function renderTodo() {
-    renderMapa(); renderListaJuntas(); renderAnalisis();
+    renderMapa();
+    renderListaJuntas();
+    renderRegistros();
+    renderAnalisis();
+    const nJuntas = Object.values(juntas).filter(j => j.es_control).length;
+    $('contadorJuntas').textContent = nJuntas;
     $('contadorEventos').textContent = eventos.length;
-    $('contadorJuntas').textContent = Object.keys(juntas).length;
+    $('contadorAnalisis').textContent = eventos.length;
   }
 
   function sentidoBadge(s) {
@@ -626,12 +758,14 @@
     juntaLayer.clearLayers();
     for (const id in juntas) {
       const j = juntas[id];
+      if (!j.es_control) continue;
       const nombre = j.nombre_personalizado || j.junta_id;
       const sent = j.sentido || 'IND';
-      const color = sent === 'DESC' ? '#f59e0b' : sent === 'ASC' ? '#38bdf8' : '#8a97ad';
+      const color = sent === 'DESC' ? '#f59e0b' : sent === 'ASC' ? '#38bdf8' : '#a78bfa';
       const subtitulo = (j.carretera||'') + (j.pk?' · PK '+j.pk:'') + ' · ' + sent;
-      L.circleMarker([j.lat,j.lng],{radius:8,color,fillColor:color,fillOpacity:.85,weight:2})
-        .bindPopup(`<b>${nombre}</b><br>${subtitulo}`).addTo(juntaLayer);
+      L.circleMarker([j.lat,j.lng],{radius:9,color,fillColor:color,fillOpacity:.85,weight:2})
+        .bindPopup(`<b>${nombre}</b><br>${subtitulo}<br><span style="color:#8a97ad;font-size:11px">${id}</span>`)
+        .addTo(juntaLayer);
     }
     eventos.forEach(e => {
       if (e.foto && e.lat && e.lon) {
@@ -644,11 +778,12 @@
 
   function renderListaJuntas() {
     const cont = $('listaJuntas');
-    const ids = Object.keys(juntas);
-    if (!ids.length) { cont.innerHTML = '<div class="empty-state">Aún no hay juntas detectadas</div>'; return; }
+    const ids = Object.values(juntas).filter(j => j.es_control).map(j => j.junta_id);
+    if (!ids.length) { cont.innerHTML = '<div class="empty-state">Aún no hay juntas de control definidas</div>'; return; }
     cont.innerHTML = '';
     ids.forEach(id => {
       const j = juntas[id];
+      const nEventos = eventos.filter(e => e.junta_id === id).length;
       const div = document.createElement('div');
       div.className = 'item';
       div.innerHTML = `
@@ -656,7 +791,10 @@
           <span>${j.nombre_personalizado || j.junta_id}</span>
           <span>${sentidoBadge(j.sentido)}</span>
         </div>
-        <div class="desc">${j.lat.toFixed(5)}, ${j.lng.toFixed(5)}</div>
+        <div class="desc">
+          ${j.carretera||'—'} · PK ${j.pk||'—'} · ${nEventos} registros<br>
+          <span style="font-family:monospace;color:var(--muted-2)">${j.lat.toFixed(5)}, ${j.lng.toFixed(5)}</span>
+        </div>
         <div class="row-2" style="margin-top:8px;">
           <div>
             <label style="margin-top:0;">Carretera</label>
@@ -676,13 +814,14 @@
               <option value="IND"  ${(!j.sentido||j.sentido==='IND')?'selected':''}>Indeterminado</option>
             </select>
           </div>
-          <div></div>
+          <div>
+            <label style="margin-top:0;">Nombre</label>
+            <input type="text" data-id="${id}" data-field="nombre_personalizado" value="${j.nombre_personalizado||''}" placeholder="Junta puente">
+          </div>
         </div>
-        <label style="margin-top:8px;">Nombre personalizado</label>
-        <input type="text" data-id="${id}" data-field="nombre_personalizado" value="${j.nombre_personalizado||''}" placeholder="Ej. Junta puente Ebro">
         <div style="display:flex;gap:6px;margin-top:8px;">
-          <button class="btn" style="margin-top:0;flex:1;" data-action="buscar-pk" data-id="${id}">Buscar PK</button>
-          <button class="btn btn-primary" style="margin-top:0;flex:1;" data-action="guardar" data-id="${id}">Guardar</button>
+          <button class="btn btn-primary btn-sm" style="flex:1;" data-action="guardar" data-id="${id}">Guardar</button>
+          <button class="btn btn-danger btn-sm" style="flex:1;" data-action="borrar" data-id="${id}">Borrar junta</button>
         </div>
       `;
       cont.appendChild(div);
@@ -697,20 +836,40 @@
           if (!j.sentido) j.sentido = 'IND';
           const ok = await guardarJunta(j);
           if (ok) { setStatus('✅ Junta guardada'); renderTodo(); }
-        } else if (btn.dataset.action === 'buscar-pk') {
-          const pk = buscarPKCercano(j.lat, j.lng);
-          if (pk) {
-            const inputs = cont.querySelectorAll(`input[data-id="${id}"], select[data-id="${id}"]`);
-            inputs.forEach(inp => {
-              if (inp.dataset.field === 'carretera') inp.value = pk.carretera;
-              if (inp.dataset.field === 'pk') inp.value = pk.pk.toFixed(3);
-            });
-            setStatus(`PK encontrado a ${Math.round(pk.distancia)}m`);
-          } else {
-            setStatus('Sin PK cercano (>500m)');
-          }
+        } else if (btn.dataset.action === 'borrar') {
+          await borrarJunta(id);
         }
       };
+    });
+  }
+
+  function renderRegistros() {
+    const cont = $('listaRegistros');
+    if (!eventos.length) { cont.innerHTML = '<div class="empty-state">Sin registros</div>'; return; }
+    cont.innerHTML = '';
+    eventos.slice(0, 100).forEach(ev => {
+      const j = juntas[ev.junta_id];
+      const nombreJunta = j ? (j.nombre_personalizado || j.junta_id) : (ev.junta_id === '__SIN_ASIGNAR__' ? 'Sin asignar' : ev.junta_id);
+      const div = document.createElement('div');
+      div.className = 'item event';
+      div.innerHTML = `
+        <div class="title">
+          <span>${nombreJunta}</span>
+          <span class="badge ${ev.tipo === 'foto' ? 'desc' : 'asc'}">${ev.tipo || 'audio'}</span>
+        </div>
+        <div class="desc">
+          ${new Date(ev.ts).toLocaleString('es-ES')}<br>
+          Nivel ${ev.nivel} · ${(ev.sentido||'IND')} · ${ev.lat?.toFixed(5)}, ${ev.lon?.toFixed(5)}
+          ${ev.foto ? '<br><span style="color:var(--warn)">📷 Con foto</span>' : ''}
+        </div>
+        <div style="margin-top:8px;">
+          <button class="btn btn-danger btn-sm" data-ev-id="${ev.id}" style="width:100%;">Borrar registro</button>
+        </div>
+      `;
+      cont.appendChild(div);
+    });
+    cont.querySelectorAll('button[data-ev-id]').forEach(btn => {
+      btn.onclick = () => borrarEvento(btn.dataset.evId);
     });
   }
 
@@ -719,7 +878,9 @@
     const diasN = parseInt($('diasMedia').value) || 5;
     const hoyKey = hoy();
     const porJunta = {};
-    eventos.forEach(e => { if (e.junta_id) (porJunta[e.junta_id] ??= []).push(e); });
+    eventos.forEach(e => {
+      if (e.junta_id && e.junta_id !== '__SIN_ASIGNAR__') (porJunta[e.junta_id] ??= []).push(e);
+    });
     const filas = [];
     let algunaAlerta = false;
     $('alertBox').classList.remove('show');
@@ -785,13 +946,14 @@
 
   $('downloadJuntasBtn').onclick = () => {
     const header = ['junta_id','carretera','pk','sentido','lat','lng','nombre_personalizado'];
-    const rows = Object.values(juntas).map(j => [
+    const rows = Object.values(juntas).filter(j=>j.es_control).map(j => [
       j.junta_id, j.carretera||'', j.pk||'', j.sentido||'IND', j.lat, j.lng, j.nombre_personalizado||''
     ]);
     descargarCSV('juntas', header, rows);
   };
 
-  $('clearBtn').onclick = borrarTodo;
+  $('btnRefrescarRegistros').onclick = cargarTodo;
+  $('btnBorrarTodosEventos').onclick = borrarTodosEventos;
 
   // ══════ PESTAÑAS ══════
   document.querySelectorAll('#tabs button').forEach(btn => {
