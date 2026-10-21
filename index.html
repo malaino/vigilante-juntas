@@ -350,13 +350,6 @@
   // ══════ MAPA Y CAPAS ══════
   const CENTRO_LA_RIOJA = [42.4627, -2.4449];
 
-  // Google Híbrido (sin API Key — no oficial, puede dejar de funcionar)
-  const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-    maxZoom: 20,
-    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-    attribution: '© Google'
-  });
-
   // PNOA — Ortofoto Máxima Actualidad (IGN)
   const pnoa = L.tileLayer.wms('https://www.ign.es/wms-inspire/pnoa-ma', {
     layers: 'OI.OrthoimageCoverage',
@@ -366,13 +359,7 @@
     maxZoom: 20
   });
 
-  // Mapa oscuro CARTO
-  const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© CARTO · © OpenStreetMap',
-    maxZoom: 19
-  });
-
-  // OpenStreetMap
+  // OpenStreetMap estándar
   const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap',
     maxZoom: 19
@@ -381,15 +368,13 @@
   const map = L.map('map', {
     center: CENTRO_LA_RIOJA,
     zoom: 10,
-    layers: [googleHybrid],   // Google Híbrido por defecto
+    layers: [pnoa],   // PNOA por defecto
     tap: true,
     touchZoom: true
   });
 
   L.control.layers({
-    "Google Híbrido": googleHybrid,
     "Ortofoto PNOA (Máxima Actualidad)": pnoa,
-    "Mapa oscuro": cartoDark,
     "OpenStreetMap": osm
   }).addTo(map);
 
